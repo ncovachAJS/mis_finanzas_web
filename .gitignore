@@ -1,0 +1,4 @@
+# config.js se genera en Render; en local apunta a localhost
+# NO ignores este archivo si quieres el valor local commiteado
+# Descomenta la línea siguiente si prefieres no commitear config.js:
+# config.js

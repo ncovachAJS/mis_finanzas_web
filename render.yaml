@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: mis-finanzas-web
+    runtime: static
+    buildCommand: echo "window.API_URL='${API_URL}';" > config.js
+    staticPublishPath: .
+    envVars:
+      - key: API_URL
+        sync: false   # lo rellenas tú en el dashboard de Render con la URL del backend
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache

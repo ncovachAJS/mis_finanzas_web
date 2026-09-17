@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Mis Finanzas — Cuentas Claras</title>
+  <script src="config.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PANTALLA DE AUTH
+════════════════════════════════════════════════════════════════ -->
+<div class="auth-screen" id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-ico">💶</div>
+      <h1>Cuentas Claras</h1>
+      <p>Tu app de finanzas personales</p>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab on" onclick="showAuthTab('login')">Entrar</button>
+      <button class="auth-tab" onclick="showAuthTab('register')">Registrarse</button>
+    </div>
+
+    <!-- Login -->
+    <div class="auth-form on" id="auth-login">
+      <div class="auth-err" id="login-err"></div>
+      <div class="fld">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="tu@email.com" autocomplete="email">
+      </div>
+      <div class="fld">
+        <label>Contraseña</label>
+        <input type="password" id="login-password" placeholder="Tu contraseña" autocomplete="current-password">
+      </div>
+      <button class="btn-p" onclick="doLogin()" id="login-btn">Entrar</button>
+    </div>
+
+    <!-- Register -->
+    <div class="auth-form" id="auth-register">
+      <div class="auth-err" id="register-err"></div>
+      <div class="fld">
+        <label>Nombre</label>
+        <input type="text" id="reg-name" placeholder="Tu nombre">
+      </div>
+      <div class="fld">
+        <label>Email</label>
+        <input type="email" id="reg-email" placeholder="tu@email.com" autocomplete="email">
+      </div>
+      <div class="fld">
+        <label>Contraseña</label>
+        <input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+      </div>
+      <button class="btn-p" onclick="doRegister()" id="register-btn">Crear cuenta</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     APP PRINCIPAL
+════════════════════════════════════════════════════════════════ -->
+<div id="app" style="display:none">
+
+<header class="hdr" id="hdr">
+  <div class="hdr-top">
+    <div class="hdr-left">
+      <div class="eyebrow">Finanzas personales</div>
+      <h1>Cuentas Claras</h1>
+    </div>
+    <div class="hdr-right">
+      <span class="hdr-user" id="hdr-user"></span>
+      <button class="btn-logout" onclick="doLogout()">Cerrar sesión</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab on" id="tab-dashboard" onclick="showTab('dashboard')">📊 Resumen</button>
+    <button class="tab" id="tab-gastos" onclick="showTab('gastos')">💸 Gastos <span class="n-badge" id="gastos-badge">0</span></button>
+    <button class="tab" id="tab-ingresos" onclick="showTab('ingresos')">💰 Ingresos <span class="n-badge" id="ingresos-badge">0</span></button>
+    <button class="tab" id="tab-cuentas" onclick="showTab('cuentas')">🏦 Cuentas</button>
+  </div>
+</header>
+
+<main class="main">
+
+<!-- ── DASHBOARD ────────────────────────────────────────────── -->
+<div class="view on" id="view-dashboard">
+  <div class="month-nav">
+    <button class="month-nav-btn" onclick="changeMonth(-1)">‹</button>
+    <span class="month-label" id="month-label">Cargando…</span>
+    <button class="month-nav-btn" onclick="changeMonth(1)">›</button>
+  </div>
+
+  <div id="dash-content">
+    <div class="ldg"><span class="ldg-dot"></span><span class="ldg-dot"></span><span class="ldg-dot"></span></div>
+  </div>
+</div>
+
+<!-- ── GASTOS ────────────────────────────────────────────────── -->
+<div class="view" id="view-gastos">
+  <div class="month-nav">
+    <button class="month-nav-btn" onclick="changeMonth(-1)">‹</button>
+    <span class="month-label" id="gastos-month-label">…</span>
+    <button class="month-nav-btn" onclick="changeMonth(1)">›</button>
+  </div>
+
+  <div class="section-hdr">
+    <h2>Gastos</h2>
+    <button class="add-btn expense" onclick="openExpenseModal()">＋ Añadir</button>
+  </div>
+
+  <div class="propagate-row">
+    <p>¿Tienes recurrentes del mes anterior?</p>
+    <button class="btn-s" onclick="propagateExpenses()">↩ Propagar</button>
+  </div>
+
+  <div class="fbar" id="gastos-filter">
+    <button class="fbtn on" data-filter="all" onclick="setGastosFilter(this,'all')">Todos</button>
+    <button class="fbtn" data-filter="paid" onclick="setGastosFilter(this,'paid')">Pagados</button>
+    <button class="fbtn" data-filter="pending" onclick="setGastosFilter(this,'pending')">Pendientes</button>
+  </div>
+
+  <div class="stats" id="gastos-stats"></div>
+  <div id="gastos-content">
+    <div class="ldg"><span class="ldg-dot"></span><span class="ldg-dot"></span><span class="ldg-dot"></span></div>
+  </div>
+</div>
+
+<!-- ── INGRESOS ──────────────────────────────────────────────── -->
+<div class="view" id="view-ingresos">
+  <div class="month-nav">
+    <button class="month-nav-btn" onclick="changeMonth(-1)">‹</button>
+    <span class="month-label" id="ingresos-month-label">…</span>
+    <button class="month-nav-btn" onclick="changeMonth(1)">›</button>
+  </div>
+
+  <div class="section-hdr">
+    <h2>Ingresos</h2>
+    <button class="add-btn income" onclick="openIncomeModal()">＋ Añadir</button>
+  </div>
+
+  <div class="propagate-row">
+    <p>¿Tienes recurrentes del mes anterior?</p>
+    <button class="btn-s" onclick="propagateIncomes()">↩ Propagar</button>
+  </div>
+
+  <div class="fbar" id="ingresos-filter">
+    <button class="fbtn on" data-filter="all" onclick="setIngresosFilter(this,'all')">Todos</button>
+    <button class="fbtn" data-filter="paid" onclick="setIngresosFilter(this,'paid')">Cobrados</button>
+    <button class="fbtn" data-filter="pending" onclick="setIngresosFilter(this,'pending')">Pendientes</button>
+  </div>
+
+  <div class="stats" id="ingresos-stats"></div>
+  <div id="ingresos-content">
+    <div class="ldg"><span class="ldg-dot"></span><span class="ldg-dot"></span><span class="ldg-dot"></span></div>
+  </div>
+</div>
+
+<!-- ── CUENTAS ───────────────────────────────────────────────── -->
+<div class="view" id="view-cuentas">
+  <div class="section-hdr">
+    <h2>Cuentas</h2>
+    <button class="add-btn" onclick="openAccountModal()">＋ Añadir</button>
+  </div>
+  <div id="cuentas-content">
+    <div class="ldg"><span class="ldg-dot"></span><span class="ldg-dot"></span><span class="ldg-dot"></span></div>
+  </div>
+</div>
+
+</main>
+</div><!-- /#app -->
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODALES
+════════════════════════════════════════════════════════════════ -->
+
+<!-- Modal Gasto -->
+<div class="modal" id="expense-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="expense-modal-title">Nuevo gasto</div>
+
+    <div class="slbl">Descripción</div>
+    <div class="fld">
+      <label>Nombre <span class="req">*</span></label>
+      <input type="text" id="e-name" placeholder="Ej: Alquiler, Netflix, Supermercado…" maxlength="100">
+      <div class="err-msg" id="e-name-err">Escribe un nombre</div>
+    </div>
+    <div class="fld">
+      <label>Importe <span class="req">*</span></label>
+      <div class="amount-row">
+        <span class="currency-prefix">€</span>
+        <input type="number" id="e-amount" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="err-msg" id="e-amount-err">Introduce un importe válido</div>
+    </div>
+    <div class="fld">
+      <label>Notas</label>
+      <textarea id="e-notes" placeholder="Opcional…" rows="2"></textarea>
+    </div>
+
+    <div class="slbl">Asignación</div>
+    <div class="fld">
+      <label>Cuenta <span class="req">*</span></label>
+      <select id="e-account">
+        <option value="">Selecciona una cuenta…</option>
+      </select>
+      <div class="err-msg" id="e-account-err">Selecciona una cuenta</div>
+    </div>
+    <div class="fld">
+      <label>Mes y año</label>
+      <div style="display:flex;gap:8px">
+        <select id="e-month" style="flex:1"></select>
+        <input type="number" id="e-year" min="2020" max="2099" style="width:90px;flex:none">
+      </div>
+    </div>
+    <div class="fld">
+      <label>Recurrencia</label>
+      <select id="e-recurrence">
+        <option value="NONE">Sin recurrencia</option>
+        <option value="MONTHLY">Mensual</option>
+        <option value="ANNUAL">Anual</option>
+      </select>
+    </div>
+
+    <div class="slbl">Estado</div>
+    <div class="toggle-row" id="e-paid-toggle" onclick="togglePaid('e')">
+      <div class="sw"></div>
+      <div class="tg-lbl">Marcado como pagado</div>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn-s" onclick="closeModal('expense-modal')">Cancelar</button>
+      <button class="btn-p" onclick="saveExpense()" id="e-save-btn">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Ingreso -->
+<div class="modal" id="income-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="income-modal-title">Nuevo ingreso</div>
+
+    <div class="slbl">Descripción</div>
+    <div class="fld">
+      <label>Nombre <span class="req">*</span></label>
+      <input type="text" id="i-name" placeholder="Ej: Nómina, Freelance, Alquiler…" maxlength="100">
+      <div class="err-msg" id="i-name-err">Escribe un nombre</div>
+    </div>
+    <div class="fld">
+      <label>Importe <span class="req">*</span></label>
+      <div class="amount-row">
+        <span class="currency-prefix">€</span>
+        <input type="number" id="i-amount" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="err-msg" id="i-amount-err">Introduce un importe válido</div>
+    </div>
+    <div class="fld">
+      <label>Notas</label>
+      <textarea id="i-notes" placeholder="Opcional…" rows="2"></textarea>
+    </div>
+
+    <div class="slbl">Asignación</div>
+    <div class="fld">
+      <label>Mes y año</label>
+      <div style="display:flex;gap:8px">
+        <select id="i-month" style="flex:1"></select>
+        <input type="number" id="i-year" min="2020" max="2099" style="width:90px;flex:none">
+      </div>
+    </div>
+    <div class="fld">
+      <label>Recurrencia</label>
+      <select id="i-recurrence">
+        <option value="NONE">Sin recurrencia</option>
+        <option value="MONTHLY">Mensual</option>
+        <option value="ANNUAL">Anual</option>
+      </select>
+    </div>
+
+    <div class="slbl">Estado</div>
+    <div class="toggle-row" id="i-paid-toggle" onclick="togglePaid('i')">
+      <div class="sw"></div>
+      <div class="tg-lbl">Marcado como cobrado</div>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn-s" onclick="closeModal('income-modal')">Cancelar</button>
+      <button class="btn-p" onclick="saveIncome()" id="i-save-btn">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Cuenta -->
+<div class="modal" id="account-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="account-modal-title">Nueva cuenta</div>
+
+    <div class="fld">
+      <label>Nombre de la cuenta <span class="req">*</span></label>
+      <input type="text" id="a-name" placeholder="Ej: BBVA, Cuenta nómina, Caja…" maxlength="80">
+      <div class="err-msg" id="a-name-err">Escribe un nombre</div>
+    </div>
+    <div class="fld">
+      <label>Presupuesto mensual (opcional)</label>
+      <div class="amount-row">
+        <span class="currency-prefix">€</span>
+        <input type="number" id="a-budget" placeholder="0.00" min="0" step="0.01">
+      </div>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn-s" onclick="closeModal('account-modal')">Cancelar</button>
+      <button class="btn-p" onclick="saveAccount()" id="a-save-btn">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Confirmación Borrar -->
+<div class="modal" id="confirm-modal">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-handle"></div>
+    <div class="modal-title">¿Eliminar?</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px" id="confirm-msg">Esta acción no se puede deshacer.</p>
+    <div class="modal-btns">
+      <button class="btn-s" onclick="closeModal('confirm-modal')">Cancelar</button>
+      <button class="btn-danger" onclick="confirmDelete()" style="flex:1">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
