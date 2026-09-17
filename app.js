@@ -83,7 +83,7 @@ async function doLogin() {
   try {
     const data = await api('POST', '/auth/login', { email, password });
     if (!data) return;
-    state.token = data.access_token;
+    state.token = data.token ?? data.access_token;
     state.user  = data.user;
     localStorage.setItem('finanzas_token', state.token);
     localStorage.setItem('finanzas_user', JSON.stringify(state.user));
@@ -111,7 +111,7 @@ async function doRegister() {
   try {
     const data = await api('POST', '/auth/register', { name, email, password });
     if (!data) return;
-    state.token = data.access_token;
+    state.token = data.token ?? data.access_token;
     state.user  = data.user;
     localStorage.setItem('finanzas_token', state.token);
     localStorage.setItem('finanzas_user', JSON.stringify(state.user));
