@@ -185,10 +185,15 @@ async function startApp() {
 
   const hdr = document.getElementById('hdr');
   if (hdr) {
-    const setHdrH = () => document.documentElement.style.setProperty('--hdr-h', hdr.offsetHeight + 'px');
-    setHdrH();
-    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(setHdrH).observe(hdr);
-    else setTimeout(setHdrH, 300);
+    const setHdrH = () => {
+      const h = hdr.offsetHeight;
+      if (h > 0) document.documentElement.style.setProperty('--hdr-h', h + 'px');
+    };
+    requestAnimationFrame(() => {
+      setHdrH();
+      if (typeof ResizeObserver !== 'undefined') new ResizeObserver(setHdrH).observe(hdr);
+      else setTimeout(setHdrH, 300);
+    });
   }
 
   updateMonthLabels();

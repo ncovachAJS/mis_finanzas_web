@@ -107,9 +107,9 @@ input[type=date]{color-scheme:light}
 .annual-hero-meta{display:flex;gap:16px;margin-top:8px;font-size:12px;opacity:.8}
 
 /* DASHBOARD SUBTABS */
-.dash-subtabs{display:flex;gap:6px;margin-bottom:20px;background:var(--surface-2);border-radius:10px;padding:4px}
-.dash-stab{flex:1;background:none;border:none;border-radius:7px;padding:7px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;transition:all .15s}
-.dash-stab.on{background:var(--surface);color:var(--primary);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.dash-subtabs{display:flex;gap:6px;margin-bottom:20px;background:var(--surface-2);border-radius:12px;padding:4px;position:sticky;top:var(--hdr-h,170px);z-index:90}
+.dash-stab{flex:1;background:none;border:none;border-radius:9px;padding:9px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s}
+.dash-stab.on{background:var(--surface);color:var(--primary);box-shadow:0 2px 8px rgba(0,0,0,.12)}
 
 /* CHART */
 .chart-wrap{background:var(--surface);border:none;border-radius:14px;padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 6px rgba(0,0,0,.06),0 4px 20px rgba(0,0,0,.04)}
