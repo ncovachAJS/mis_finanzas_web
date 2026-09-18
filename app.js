@@ -295,7 +295,7 @@ function renderDashboard(data) {
   document.getElementById('dash-content').innerHTML = `
     ${budgetAlert}
     <div class="balance-hero ${pos ? '' : 'neg'}">
-      <div class="balance-hero-label">Balance — ${MONTHS[state.month-1]} ${state.year}</div>
+      <div class="balance-hero-label">Ahorro del mes — ${MONTHS[state.month-1]} ${state.year}</div>
       <div class="balance-hero-amount">${pos ? '+' : ''}${fmtEur(available)}</div>
       <div class="balance-hero-sub">${pos ? '¡Vas bien! Ingresos superan a gastos.' : 'Los gastos superan los ingresos este mes.'}</div>
     </div>
@@ -414,7 +414,45 @@ function renderAnnualDashboard(data) {
       <div class="chart-title">Distribución de gastos</div>
       ${donutChart}
     </div>` : ''}
+
+    ${renderMonthlySavings(data.months, state.dashYear)}
   `;
+}
+
+function renderMonthlySavings(months, year) {
+  const now = new Date();
+  const curMonth = (year === now.getFullYear()) ? now.getMonth() + 1 : 12;
+  const pastMonths = months.filter(m => m.month <= curMonth);
+  if (!pastMonths.length) return '';
+
+  const annualTotal = pastMonths.reduce((s, m) => s + m.savings, 0);
+  const maxAbs = Math.max(...pastMonths.map(m => Math.abs(m.savings)), 1);
+  const totPos = annualTotal >= 0;
+
+  const rows = pastMonths.map(m => {
+    const pos = m.savings >= 0;
+    const pct = Math.min(Math.abs(m.savings) / maxAbs * 100, 100);
+    return `
+      <div class="sv-row">
+        <span class="sv-month">${MONTHS_SHORT[m.month - 1]}</span>
+        <div class="sv-bar-track">
+          <div class="sv-bar-fill ${pos ? 'pos' : 'neg'}" style="width:${pct.toFixed(1)}%"></div>
+        </div>
+        <span class="sv-amount ${pos ? 'c-income' : 'c-expense'}">${pos ? '+' : ''}${fmtEur(m.savings)}</span>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="chart-wrap">
+      <div class="sv-total">
+        <div>
+          <div class="chart-title" style="margin-bottom:2px">Ahorro mensual</div>
+          <div style="font-size:12px;color:var(--muted)">Ingresos cobrados − gastos pagados</div>
+        </div>
+        <div class="sv-total-amount ${totPos ? 'c-income' : 'c-expense'}">${totPos ? '+' : ''}${fmtEur(annualTotal)}</div>
+      </div>
+      ${rows}
+    </div>`;
 }
 
 function renderBarChart(months) {

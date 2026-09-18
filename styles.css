@@ -244,6 +244,17 @@ input[type=date]{color-scheme:light}
 .hist-amount.expense{color:var(--expense)}
 .hist-status{font-size:11px;font-weight:500;color:var(--muted);margin-top:2px;display:block}
 
+/* SAVINGS BREAKDOWN */
+.sv-total{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:14px;border-bottom:1.5px solid var(--border)}
+.sv-total-amount{font-family:'DM Serif Display',serif;font-size:26px;letter-spacing:-.02em;line-height:1}
+.sv-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border-l)}
+.sv-row:last-child{border-bottom:none}
+.sv-month{font-size:11px;font-weight:700;color:var(--muted);width:30px;flex-shrink:0;text-transform:uppercase;letter-spacing:.05em}
+.sv-bar-track{flex:1;height:7px;background:var(--border-l);border-radius:4px;overflow:hidden}
+.sv-bar-fill{height:100%;border-radius:4px;transition:width .4s}
+.sv-bar-fill.pos{background:var(--income)}.sv-bar-fill.neg{background:var(--expense)}
+.sv-amount{font-size:13px;font-weight:600;font-family:'DM Serif Display',serif;width:88px;text-align:right;flex-shrink:0;white-space:nowrap}
+
 /* TOAST */
 .toast{display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:12px 20px;border-radius:8px;font-size:14px;font-weight:500;z-index:1100;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.2)}
 .toast.on{display:block}
