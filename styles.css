@@ -46,7 +46,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;font-size:16px;line-height:1.6;b
 .tab.on .n-badge{background:rgba(200,98,26,.35);color:#ffcfaa}
 
 /* MAIN */
-.main{max-width:700px;margin:0 auto;padding:24px 16px 80px;padding-top:calc(var(--hdr-h,120px) + 24px)}
+.main{max-width:700px;margin:0 auto;padding:24px 16px 80px;padding-top:calc(var(--hdr-h,170px) + 24px)}
 .view{display:none}.view.on{display:block}
 
 /* FORMS */
@@ -282,7 +282,7 @@ input[type=date]{color-scheme:light}
 
 @media(max-width:480px){
   .hdr-left h1{font-size:18px}
-  .main{padding:16px 12px 88px;padding-top:calc(var(--hdr-h,120px) + 16px)}
+  .main{padding:16px 12px 88px;padding-top:calc(var(--hdr-h,170px) + 16px)}
   .stats{grid-template-columns:repeat(2,1fr)}
   .balance-hero-amount{font-size:36px}
   .tab{font-size:12px;padding:12px 9px}

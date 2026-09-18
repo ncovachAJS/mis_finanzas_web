@@ -183,10 +183,13 @@ async function startApp() {
   document.getElementById('app').style.display = 'block';
   document.getElementById('hdr-user').textContent = state.user?.name?.split(' ')[0] ?? '';
 
-  requestAnimationFrame(() => {
-    const h = document.getElementById('hdr')?.offsetHeight;
-    if (h) document.documentElement.style.setProperty('--hdr-h', h + 'px');
-  });
+  const hdr = document.getElementById('hdr');
+  if (hdr) {
+    const setHdrH = () => document.documentElement.style.setProperty('--hdr-h', hdr.offsetHeight + 'px');
+    setHdrH();
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(setHdrH).observe(hdr);
+    else setTimeout(setHdrH, 300);
+  }
 
   updateMonthLabels();
   populateMonthSelects();
