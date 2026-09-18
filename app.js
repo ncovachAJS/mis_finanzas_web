@@ -179,11 +179,8 @@ async function startApp() {
   populateMonthSelects();
   populateHistoryFilters();
 
-  await loadAccounts();
-  await loadCategories();
-  loadDashboard();
-  loadGastos();
-  loadIngresos();
+  // Fire all in parallel — backend cold-start hits once, not 5 times
+  Promise.all([loadAccounts(), loadCategories(), loadDashboard(), loadGastos(), loadIngresos()]);
 }
 
 /* ═══════════════════════════════════════════════════════════
