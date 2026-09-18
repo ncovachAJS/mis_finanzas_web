@@ -52,6 +52,19 @@ const state = {
 const fmt = new Intl.NumberFormat('es-ES', { style:'currency', currency:'EUR', minimumFractionDigits:2 });
 function fmtEur(n) { return fmt.format(n ?? 0); }
 
+/* Cache helpers — show stale data instantly, refresh in background */
+function saveCache(key, data) {
+  try { localStorage.setItem('cc_' + key, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
+}
+function loadCache(key, maxMs = 8 * 60 * 1000) {
+  try {
+    const raw = localStorage.getItem('cc_' + key);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    return (Date.now() - ts < maxMs) ? data : null;
+  } catch(e) { return null; }
+}
+
 function showToast(msg, type = '') {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -246,13 +259,16 @@ function changeYear(delta) {
 ════════════════════════════════════════════════════════════════ */
 async function loadDashboard() {
   const el = document.getElementById('dash-content');
-  el.innerHTML = ldg();
+  const cacheKey = `dash_${state.month}_${state.year}`;
+  const cached = loadCache(cacheKey);
+  if (cached) renderDashboard(cached); else el.innerHTML = ldg();
   try {
     const data = await api('GET', `/dashboard/month?month=${state.month}&year=${state.year}`);
     if (!data) return;
+    saveCache(cacheKey, data);
     renderDashboard(data);
   } catch(e) {
-    el.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><h3>Sin conexión</h3><p>${e.message}</p></div>`;
+    if (!cached) el.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><h3>Sin conexión</h3><p>${e.message}</p></div>`;
   }
 }
 
@@ -516,27 +532,35 @@ function renderHistory() {
   let html = '';
   Object.keys(groups).sort((a,b) => b.localeCompare(a)).forEach(key => {
     const [y, m] = key.split('-');
-    html += `<div class="hist-group-hdr">${MONTHS[parseInt(m)-1]} ${y}</div>`;
+    const grpTotal = groups[key].reduce((s, i) => s + (i.type === 'income' ? i.amount : -i.amount), 0);
+    const pos = grpTotal >= 0;
+    html += `<div class="hist-month-hdr">
+      <span class="hist-month-name">${MONTHS[parseInt(m)-1]} ${y}</span>
+      <span class="hist-month-net ${pos ? 'pos' : 'neg'}">${pos ? '+' : ''}${fmtEur(grpTotal)}</span>
+    </div>`;
+    html += `<div class="hist-group">`;
     groups[key].forEach(item => {
       const isIncome = item.type === 'income';
       const meta = [
         isIncome ? null : esc(item.accountName || ''),
-        item.categoryName ? `${esc(item.categoryName)}` : null,
+        item.categoryName ? esc(item.categoryName) : null,
         item.recurrence && item.recurrence !== 'NONE' ? recLabel(item.recurrence) : null,
       ].filter(Boolean).join(' · ');
+      const paidLabel = item.isPaid ? (isIncome ? 'Cobrado' : 'Pagado') : 'Pendiente';
       html += `
         <div class="hist-item">
-          <div class="hist-ico ${item.type}">${isIncome ? '💰' : '💸'}</div>
+          <div class="hist-ico ${item.type}">${isIncome ? '↑' : '↓'}</div>
           <div class="hist-body">
             <div class="hist-name">${esc(item.name)}</div>
             ${meta ? `<div class="hist-meta">${meta}</div>` : ''}
           </div>
           <div class="hist-right">
             <div class="hist-amount ${item.type}">${isIncome ? '+' : '-'}${fmtEur(item.amount)}</div>
-            <span class="hist-status ${item.isPaid ? 's-paid' : 's-pending'}">${item.isPaid ? (isIncome ? '✓ Cobrado' : '✓ Pagado') : '⏳ Pendiente'}</span>
+            <span class="hist-status ${item.isPaid ? 's-paid' : 's-pending'}">${paidLabel}</span>
           </div>
         </div>`;
     });
+    html += `</div>`;
   });
   document.getElementById('historial-content').innerHTML = html;
 }
@@ -546,13 +570,17 @@ function renderHistory() {
 ════════════════════════════════════════════════════════════════ */
 async function loadGastos() {
   const el = document.getElementById('gastos-content');
-  el.innerHTML = ldg();
+  const cacheKey = `exp_${state.month}_${state.year}`;
+  const cached = loadCache(cacheKey);
+  if (cached) { state.expenses = cached; renderGastos(); } else el.innerHTML = ldg();
   try {
     const data = await api('GET', `/expenses?month=${state.month}&year=${state.year}`);
+    if (data === null) return;
     state.expenses = data ?? [];
+    saveCache(cacheKey, state.expenses);
     renderGastos();
   } catch(e) {
-    el.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><h3>Error</h3><p>${e.message}</p></div>`;
+    if (!cached) el.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><h3>Error</h3><p>${e.message}</p></div>`;
   }
 }
 
@@ -661,13 +689,17 @@ function setGastosFilter(btn, f) {
 ════════════════════════════════════════════════════════════════ */
 async function loadIngresos() {
   const el = document.getElementById('ingresos-content');
-  el.innerHTML = ldg();
+  const cacheKey = `inc_${state.month}_${state.year}`;
+  const cached = loadCache(cacheKey);
+  if (cached) { state.incomes = cached; renderIngresos(); } else el.innerHTML = ldg();
   try {
     const data = await api('GET', `/incomes?month=${state.month}&year=${state.year}`);
+    if (data === null) return;
     state.incomes = data ?? [];
+    saveCache(cacheKey, state.incomes);
     renderIngresos();
   } catch(e) {
-    el.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><h3>Error</h3><p>${e.message}</p></div>`;
+    if (!cached) el.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><h3>Error</h3><p>${e.message}</p></div>`;
   }
 }
 
