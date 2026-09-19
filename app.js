@@ -775,7 +775,7 @@ function renderExpenseCard(e) {
           <div class="ramount expense">${fmtEur(e.amount)}</div>
         </div>
         <div class="rfoot">
-          <span class="spill ${e.isPaid ? 's-paid' : 's-pending'}">${e.isPaid ? '✓ Pagado' : '⏳ Pendiente'}</span>
+          <span class="spill ${e.isPaid ? 's-paid' : 's-pending'}">${e.isPaid ? 'Pagado' : 'Pendiente'}</span>
           <div class="ractions">
             <button class="act-btn paid-toggle ${e.isPaid ? 'is-paid' : ''}" onclick="toggleExpensePaid('${e.id}',${e.isPaid})">
               ${e.isPaid ? '↩ Pendiente' : '✓ Pagado'}
@@ -857,7 +857,7 @@ function renderIngresos() {
           <div class="ramount income">${fmtEur(i.amount)}</div>
         </div>
         <div class="rfoot">
-          <span class="spill ${i.isPaid ? 's-paid' : 's-pending'}">${i.isPaid ? '✓ Cobrado' : '⏳ Pendiente'}</span>
+          <span class="spill ${i.isPaid ? 's-paid' : 's-pending'}">${i.isPaid ? 'Cobrado' : 'Pendiente'}</span>
           <div class="ractions">
             <button class="act-btn paid-toggle ${i.isPaid ? 'is-paid' : ''}" onclick="toggleIncomePaid('${i.id}',${i.isPaid})">
               ${i.isPaid ? '↩ Pendiente' : '✓ Cobrado'}

@@ -197,9 +197,12 @@ input[type=date]{color-scheme:light}
 .rtitle{font-size:16px;font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.3}
 .rnotes{font-size:13px;color:var(--muted);margin-bottom:4px;line-height:1.4}
 .rfoot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--border-l)}
-.spill{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:20px;white-space:nowrap}
-.s-paid{background:var(--income-l);color:var(--income)}
-.s-pending{background:var(--pending-l);color:var(--pending)}
+.spill{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px 4px 8px;border-radius:20px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.spill::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.s-paid{background:var(--income-l);color:var(--income);border:1px solid var(--income)}
+.s-paid::before{background:var(--income)}
+.s-pending{background:var(--pending-l);color:var(--pending);border:1px solid var(--pending)}
+.s-pending::before{background:var(--pending)}
 .ractions{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
 .act-btn{background:var(--surface-2);border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:6px 11px;border-radius:8px;transition:all .15s;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:4px;min-height:36px;white-space:nowrap}
 .act-btn:hover{background:var(--border);color:var(--text)}
