@@ -1,4 +1,12 @@
 /* ═══════════════════════════════════════════════════════════
+   THEME
+════════════════════════════════════════════════════════════════ */
+(function initTheme() {
+  const saved = localStorage.getItem('finanzas_theme');
+  if (saved) document.documentElement.setAttribute('data-theme', saved);
+})();
+
+/* ═══════════════════════════════════════════════════════════
    CONFIG & CONSTANTS
 ════════════════════════════════════════════════════════════════ */
 const BASE = (window.API_URL || 'http://localhost:3000').replace(/\/$/, '');
@@ -182,6 +190,7 @@ async function startApp() {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('hdr-user').textContent = state.user?.name?.split(' ')[0] ?? '';
+  updateThemeBtn();
 
   const hdr = document.getElementById('hdr');
   if (hdr) {
@@ -1146,6 +1155,33 @@ function askDeleteGoal(id) {
     await loadSavingsGoals();
   };
   openModal('confirm-modal');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   THEME TOGGLE
+════════════════════════════════════════════════════════════════ */
+function updateThemeBtn() {
+  const btn = document.getElementById('btn-theme');
+  if (!btn) return;
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
+    (!document.documentElement.hasAttribute('data-theme') &&
+     window.matchMedia('(prefers-color-scheme: dark)').matches);
+  btn.textContent = isDark ? '☀️' : '🌙';
+  btn.title = isDark ? 'Cambiar a claro' : 'Cambiar a oscuro';
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  let next;
+  if (!current) {
+    next = systemDark ? 'light' : 'dark';
+  } else {
+    next = current === 'dark' ? 'light' : 'dark';
+  }
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('finanzas_theme', next);
+  updateThemeBtn();
 }
 
 /* ═══════════════════════════════════════════════════════════
