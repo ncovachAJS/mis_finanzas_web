@@ -285,7 +285,7 @@ async function startApp() {
 let activeTab = 'dashboard';
 
 function showTab(tab) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  document.querySelectorAll('.bnav-item').forEach(t => t.classList.remove('on'));
   document.querySelectorAll('.view').forEach(v => v.classList.remove('on'));
   document.getElementById('tab-' + tab).classList.add('on');
   document.getElementById('view-' + tab).classList.add('on');
@@ -860,7 +860,10 @@ function renderGastos() {
     <div class="scard"><div class="snum c-income">${fmtEur(paid)}</div><div class="slbls">Pagado</div></div>
     <div class="scard"><div class="snum c-pending">${fmtEur(pending)}</div><div class="slbls">Pendiente</div></div>
   `;
-  document.getElementById('gastos-badge').textContent = state.expenses.filter(e => !e.isPaid).length;
+  const gb = state.expenses.filter(e => !e.isPaid).length;
+  const gbEl = document.getElementById('gastos-badge');
+  gbEl.textContent = gb || '';
+  gbEl.dataset.zero = gb === 0 ? '1' : '';
 
   if (list.length === 0) {
     document.getElementById('gastos-content').innerHTML = `
@@ -978,7 +981,10 @@ function renderIngresos() {
     <div class="scard"><div class="snum c-income">${fmtEur(paid)}</div><div class="slbls">Cobrado</div></div>
     <div class="scard"><div class="snum c-pending">${fmtEur(pending)}</div><div class="slbls">Pendiente</div></div>
   `;
-  document.getElementById('ingresos-badge').textContent = state.incomes.filter(i => !i.isPaid).length;
+  const ib = state.incomes.filter(i => !i.isPaid).length;
+  const ibEl = document.getElementById('ingresos-badge');
+  ibEl.textContent = ib || '';
+  ibEl.dataset.zero = ib === 0 ? '1' : '';
 
   if (list.length === 0) {
     document.getElementById('ingresos-content').innerHTML = `

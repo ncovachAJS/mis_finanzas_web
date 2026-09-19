@@ -58,14 +58,36 @@
       <button class="btn-profile" id="btn-profile" onclick="openProfileModal()" title="Perfil">👤</button>
     </div>
   </div>
-  <div class="tabs">
-    <button class="tab on"  id="tab-dashboard" onclick="showTab('dashboard')">📊 Resumen</button>
-    <button class="tab"     id="tab-historial" onclick="showTab('historial')">🕐 Historial</button>
-    <button class="tab"     id="tab-gastos"    onclick="showTab('gastos')">💸 Gastos <span class="n-badge" id="gastos-badge">0</span></button>
-    <button class="tab"     id="tab-ingresos"  onclick="showTab('ingresos')">💰 Ingresos <span class="n-badge" id="ingresos-badge">0</span></button>
-    <button class="tab"     id="tab-cuentas"   onclick="showTab('cuentas')">🏦 Cuentas</button>
-  </div>
 </header>
+
+<nav class="bnav">
+  <button class="bnav-item on" id="tab-dashboard" onclick="showTab('dashboard')">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="13" width="4" height="8" rx="1"/><rect x="10" y="9" width="4" height="12" rx="1"/><rect x="17" y="5" width="4" height="16" rx="1"/></svg>
+    <span>Resumen</span>
+  </button>
+  <button class="bnav-item" id="tab-historial" onclick="showTab('historial')">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
+    <span>Historial</span>
+  </button>
+  <button class="bnav-item" id="tab-gastos" onclick="showTab('gastos')">
+    <span class="bnav-badge-wrap">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      <span class="bnav-badge" id="gastos-badge">0</span>
+    </span>
+    <span>Gastos</span>
+  </button>
+  <button class="bnav-item" id="tab-ingresos" onclick="showTab('ingresos')">
+    <span class="bnav-badge-wrap">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+      <span class="bnav-badge" id="ingresos-badge">0</span>
+    </span>
+    <span>Ingresos</span>
+  </button>
+  <button class="bnav-item" id="tab-cuentas" onclick="showTab('cuentas')">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+    <span>Cuentas</span>
+  </button>
+</nav>
 
 <main class="main">
 
