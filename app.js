@@ -1220,10 +1220,13 @@ async function saveExpense() {
   const cuotaNum    = parseInt(document.getElementById('e-cuota-num').value)   || undefined;
   const cuotaTotal  = parseInt(document.getElementById('e-cuota-total').value) || undefined;
 
+  const isNew = !state.editingExpenseId;
   const payload = {
     name, amount, accountId,
-    month:      parseInt(document.getElementById('e-month').value),
-    year:       parseInt(document.getElementById('e-year').value),
+    ...(isNew && {
+      month: parseInt(document.getElementById('e-month').value),
+      year:  parseInt(document.getElementById('e-year').value),
+    }),
     recurrence: document.getElementById('e-recurrence').value,
     isPaid:     document.getElementById('e-paid-toggle').classList.contains('on'),
     notes:      document.getElementById('e-notes').value.trim() || undefined,
@@ -1317,10 +1320,13 @@ async function saveIncome() {
   else                                document.getElementById('i-amount-err').classList.remove('on');
   if (!valid) return;
 
+  const isNew = !state.editingIncomeId;
   const payload = {
     name, amount,
-    month:      parseInt(document.getElementById('i-month').value),
-    year:       parseInt(document.getElementById('i-year').value),
+    ...(isNew && {
+      month: parseInt(document.getElementById('i-month').value),
+      year:  parseInt(document.getElementById('i-year').value),
+    }),
     recurrence: document.getElementById('i-recurrence').value,
     isPaid:     document.getElementById('i-paid-toggle').classList.contains('on'),
     notes:      document.getElementById('i-notes').value.trim() || undefined,
