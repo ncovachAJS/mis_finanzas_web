@@ -100,12 +100,57 @@ function openModal(id) {
   _modalZ += 10;
   el.style.zIndex = _modalZ;
   el.classList.add('on');
+  _enableSwipeToClose(el);
 }
 function closeModal(id) {
   const el = document.getElementById(id);
   el.classList.remove('on');
   el.style.zIndex = '';
   _modalZ = Math.max(999, _modalZ - 10);
+}
+
+function _enableSwipeToClose(modalEl) {
+  const box = modalEl.querySelector('.modal-box');
+  if (!box || box.dataset.swipe) return;
+  box.dataset.swipe = '1';
+  let startY = 0, dy = 0, active = false;
+
+  box.addEventListener('touchstart', e => {
+    if (box.scrollTop > 0) return;
+    startY = e.touches[0].clientY;
+    dy = 0; active = true;
+    box.style.transition = 'none';
+  }, { passive: true });
+
+  box.addEventListener('touchmove', e => {
+    if (!active) return;
+    dy = e.touches[0].clientY - startY;
+    if (dy < 0) { active = false; box.style.transform = ''; return; }
+    box.style.transform = `translateY(${dy}px)`;
+    modalEl.style.background = `rgba(0,0,0,${Math.max(0, 0.55 - dy / 600)})`;
+  }, { passive: true });
+
+  const end = () => {
+    if (!active) return;
+    active = false;
+    box.style.transition = 'transform .25s ease';
+    if (dy > 110) {
+      box.style.transform = 'translateY(110%)';
+      modalEl.style.transition = 'background .25s';
+      modalEl.style.background = 'rgba(0,0,0,0)';
+      setTimeout(() => {
+        closeModal(modalEl.id);
+        box.style.cssText = '';
+        modalEl.style.cssText = '';
+      }, 250);
+    } else {
+      box.style.transform = '';
+      modalEl.style.background = '';
+      setTimeout(() => { box.style.transition = ''; }, 250);
+    }
+  };
+  box.addEventListener('touchend',   end, { passive: true });
+  box.addEventListener('touchcancel', end, { passive: true });
 }
 
 function esc(s) {
