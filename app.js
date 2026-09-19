@@ -255,7 +255,8 @@ function doLogout() {
 async function startApp() {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  document.getElementById('hdr-user').textContent = state.user?.name?.split(' ')[0] ?? '';
+  const nameEl = document.getElementById('hdr-user');
+  if (nameEl) nameEl.textContent = state.user?.name?.split(' ')[0] ?? '';
   updateAvatarUI(state.user?.avatar || null);
 
   const hdr = document.getElementById('hdr');
@@ -1377,12 +1378,11 @@ function resizeImageToBase64(file, size = 200) {
 }
 
 function updateAvatarUI(src) {
-  const btn = document.getElementById('btn-profile');
-  if (!btn) return;
-  if (src) {
-    btn.innerHTML = `<img src="${src}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;display:block">`;
-  } else {
-    btn.textContent = '👤';
+  const icoEl = document.querySelector('.btn-profile-ico');
+  if (icoEl) {
+    icoEl.innerHTML = src
+      ? `<img src="${src}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;display:block">`
+      : '👤';
   }
   const prev = document.getElementById('p-avatar-img');
   if (prev) { prev.src = src || ''; prev.style.display = src ? 'block' : 'none'; }
