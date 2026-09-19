@@ -76,7 +76,7 @@ h1{font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;line-heig
 .bnav-badge:empty,.bnav-badge[data-zero="1"]{display:none}
 
 /* MAIN */
-.main{max-width:700px;margin:0 auto;padding:24px 16px;padding-top:calc(env(safe-area-inset-top,0px) + 96px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 100px)}
+.main{max-width:700px;margin:0 auto;padding:24px 16px;padding-top:calc(env(safe-area-inset-top,0px) + 116px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 100px)}
 .view{display:none}.view.on{display:block}
 
 /* FORMS */
@@ -357,7 +357,7 @@ input[type=date]{color-scheme:light}
 
 @media(max-width:480px){
   h1{font-size:19px}
-  .main{padding:16px 12px;padding-top:calc(env(safe-area-inset-top,0px) + 96px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 100px)}
+  .main{padding:16px 12px;padding-top:calc(env(safe-area-inset-top,0px) + 116px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 100px)}
   .stats{grid-template-columns:repeat(2,1fr)}
   .balance-hero-amount{font-size:36px}
   .tab{font-size:12px;padding:12px 9px}
