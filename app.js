@@ -1447,6 +1447,7 @@ function askDeleteExpense(id) {
 
 async function propagateEditToFuture(endpoint, name, putPayload, fromMonth, fromYear) {
   let updated = 0;
+  const cachePrefix = endpoint === 'expenses' ? 'exp' : 'inc';
   for (let m = fromMonth + 1; m <= 12; m++) {
     try {
       const items = await api('GET', `/${endpoint}?month=${m}&year=${fromYear}`);
@@ -1454,10 +1455,15 @@ async function propagateEditToFuture(endpoint, name, putPayload, fromMonth, from
       const match = items.find(i => i.name.toLowerCase() === name.toLowerCase());
       if (match) {
         await api('PUT', `/${endpoint}/${match.id}`, putPayload);
+        // Invalidate cache for this month so next load is fresh
+        try { localStorage.removeItem(`cc_${cachePrefix}_${m}_${fromYear}`); } catch(e) {}
+        try { localStorage.removeItem(`cc_dash_${m}_${fromYear}`); } catch(e) {}
         updated++;
       }
     } catch(e) { /* silencioso */ }
   }
+  // Refresh annual dashboard if visible
+  if (activeTab === 'dashboard') loadAnnualDashboard();
   return updated;
 }
 
