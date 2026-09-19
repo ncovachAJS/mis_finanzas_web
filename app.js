@@ -94,8 +94,19 @@ async function api(method, path, body) {
   return data;
 }
 
-function openModal(id)  { document.getElementById(id).classList.add('on'); }
-function closeModal(id) { document.getElementById(id).classList.remove('on'); }
+let _modalZ = 999;
+function openModal(id) {
+  const el = document.getElementById(id);
+  _modalZ += 10;
+  el.style.zIndex = _modalZ;
+  el.classList.add('on');
+}
+function closeModal(id) {
+  const el = document.getElementById(id);
+  el.classList.remove('on');
+  el.style.zIndex = '';
+  _modalZ = Math.max(999, _modalZ - 10);
+}
 
 function esc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
