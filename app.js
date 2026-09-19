@@ -844,7 +844,7 @@ function renderExpenseCard(e) {
       <div class="rbody">
         <div class="rmeta">
           <div>
-            <div class="rcat">${esc(e.accountName || 'Sin cuenta')}${e.recurrence && e.recurrence !== 'NONE' ? ' · ' + recLabel(e.recurrence) : ''}</div>
+            <div class="rcat">${esc(e.accountName || state.accounts.find(a => String(a.id) === String(e.accountId))?.name || 'Sin cuenta')}${e.recurrence && e.recurrence !== 'NONE' ? ' · ' + recLabel(e.recurrence) : ''}</div>
             <div class="rtitle">${esc(e.name)}</div>
             ${(tp || catTag || cuotaTag) ? `<div class="tag-row">${tp}${catTag}${cuotaTag}</div>` : ''}
             ${e.notes ? `<div class="rnotes">${esc(e.notes)}</div>` : ''}
@@ -927,7 +927,7 @@ function renderIngresos() {
       <div class="rbody">
         <div class="rmeta">
           <div>
-            <div class="rcat">${esc(i.accountName || 'Sin cuenta')}${i.recurrence && i.recurrence !== 'NONE' ? ' · ' + recLabel(i.recurrence) : ''}</div>
+            <div class="rcat">${esc(i.accountName || state.accounts.find(a => String(a.id) === String(i.accountId))?.name || 'Sin cuenta')}${i.recurrence && i.recurrence !== 'NONE' ? ' · ' + recLabel(i.recurrence) : ''}</div>
             <div class="rtitle">${esc(i.name)}</div>
             ${i.notes ? `<div class="rnotes">${esc(i.notes)}</div>` : ''}
           </div>
