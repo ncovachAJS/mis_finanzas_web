@@ -927,7 +927,7 @@ function renderIngresos() {
       <div class="rbody">
         <div class="rmeta">
           <div>
-            <div class="rcat">${i.recurrence && i.recurrence !== 'NONE' ? recLabel(i.recurrence) : 'Ingreso'}</div>
+            <div class="rcat">${(() => { const acName = i.accountName || state.accounts.find(a => String(a.id) === String(i.accountId))?.name || ''; const rec = i.recurrence && i.recurrence !== 'NONE' ? recLabel(i.recurrence) : 'Ingreso'; return acName ? `${acName} · ${rec}` : rec; })()}</div>
             <div class="rtitle">${esc(i.name)}</div>
             ${i.notes ? `<div class="rnotes">${esc(i.notes)}</div>` : ''}
           </div>
@@ -935,7 +935,6 @@ function renderIngresos() {
         </div>
         <div class="rfoot">
           <span class="spill ${i.isPaid ? 's-paid' : 's-pending'}">${i.isPaid ? 'Cobrado' : 'Pendiente'}</span>
-          ${(i.accountName || state.accounts.find(a => String(a.id) === String(i.accountId))?.name) ? `<span class="rtag">${esc(i.accountName || state.accounts.find(a => String(a.id) === String(i.accountId))?.name)}</span>` : ''}
           <div class="ractions">
             <button class="act-btn paid-toggle ${i.isPaid ? 'is-paid' : ''}" onclick="toggleIncomePaid('${i.id}',${i.isPaid})">
               ${i.isPaid ? '↩ Pendiente' : '✓ Cobrado'}
