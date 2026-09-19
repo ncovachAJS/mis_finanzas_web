@@ -161,7 +161,7 @@ input[type=date]{color-scheme:light}
 .month-label{font-family:'DM Serif Display',serif;font-size:18px;font-weight:400;color:var(--text);min-width:120px;text-align:center}
 
 /* FILTER BAR */
-.fbar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:0;align-items:center}
+.fbar{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom: 12px;}
 .fbtn{padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s}
 .fbtn.on{border-color:var(--primary);background:var(--primary-l);color:var(--primary)}
 
