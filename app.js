@@ -915,7 +915,7 @@ function renderIngresos() {
       <div class="rbody">
         <div class="rmeta">
           <div>
-            <div class="rcat">${i.recurrence && i.recurrence !== 'NONE' ? recLabel(i.recurrence) : 'Ingreso'}</div>
+            <div class="rcat">${esc(i.accountName || 'Sin cuenta')}${i.recurrence && i.recurrence !== 'NONE' ? ' · ' + recLabel(i.recurrence) : ''}</div>
             <div class="rtitle">${esc(i.name)}</div>
             ${i.notes ? `<div class="rnotes">${esc(i.notes)}</div>` : ''}
           </div>
@@ -981,10 +981,12 @@ function renderAccounts() {
 }
 
 function populateAccountSelect() {
-  const sel = document.getElementById('e-account');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">Selecciona una cuenta…</option>' +
+  const opts = '<option value="">Selecciona una cuenta…</option>' +
     state.accounts.map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join('');
+  ['e-account', 'i-account'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel) sel.innerHTML = opts;
+  });
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1451,16 +1453,18 @@ function openIncomeModal(id) {
   document.getElementById('income-modal-title').textContent = isEdit ? 'Editar ingreso' : 'Nuevo ingreso';
   ['i-name','i-amount','i-notes'].forEach(f => document.getElementById(f).value = '');
   document.getElementById('i-recurrence').value = 'NONE';
+  document.getElementById('i-account').value    = '';
   document.getElementById('i-month').value      = state.month;
   document.getElementById('i-year').value       = state.year;
   document.getElementById('i-paid-toggle').classList.remove('on');
-  ['i-name-err','i-amount-err'].forEach(e => document.getElementById(e).classList.remove('on'));
+  ['i-name-err','i-amount-err','i-account-err'].forEach(e => document.getElementById(e).classList.remove('on'));
   if (isEdit) {
     const inc = state.incomes.find(i => i.id === id);
     if (inc) {
       document.getElementById('i-name').value       = inc.name;
       document.getElementById('i-amount').value     = inc.amount;
       document.getElementById('i-notes').value      = inc.notes ?? '';
+      document.getElementById('i-account').value    = inc.accountId ?? '';
       document.getElementById('i-month').value      = inc.month;
       document.getElementById('i-year').value       = inc.year;
       document.getElementById('i-recurrence').value = inc.recurrence ?? 'NONE';
@@ -1478,11 +1482,14 @@ async function saveIncome() {
   else                                document.getElementById('i-name-err').classList.remove('on');
   if (isNaN(amount) || amount < 0)  { document.getElementById('i-amount-err').classList.add('on'); valid = false; }
   else                                document.getElementById('i-amount-err').classList.remove('on');
+  const accountId = document.getElementById('i-account').value;
+  if (!accountId) { document.getElementById('i-account-err').classList.add('on'); valid = false; }
+  else              document.getElementById('i-account-err').classList.remove('on');
   if (!valid) return;
 
   const isNew = !state.editingIncomeId;
   const payload = {
-    name, amount,
+    name, amount, accountId,
     ...(isNew && {
       month: parseInt(document.getElementById('i-month').value),
       year:  parseInt(document.getElementById('i-year').value),
