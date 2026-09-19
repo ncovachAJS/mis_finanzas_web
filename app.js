@@ -150,6 +150,7 @@ async function doLogin() {
   try {
     const data = await api('POST', '/auth/login', { email, password });
     if (!data) return;
+    clearUserCache();
     state.token = data.token ?? data.access_token;
     state.user  = data.user;
     localStorage.setItem('finanzas_token', state.token);
@@ -174,6 +175,7 @@ async function doRegister() {
   try {
     const data = await api('POST', '/auth/register', { name, email, password });
     if (!data) return;
+    clearUserCache();
     state.token = data.token ?? data.access_token;
     state.user  = data.user;
     localStorage.setItem('finanzas_token', state.token);
@@ -185,7 +187,15 @@ async function doRegister() {
   } finally { btn.disabled = false; btn.textContent = 'Crear cuenta'; }
 }
 
+function clearUserCache() {
+  try {
+    const keys = Object.keys(localStorage).filter(k => k.startsWith('cc_'));
+    keys.forEach(k => localStorage.removeItem(k));
+  } catch(e) {}
+}
+
 function doLogout() {
+  clearUserCache();
   state.token = null; state.user = null;
   localStorage.removeItem('finanzas_token');
   localStorage.removeItem('finanzas_user');
