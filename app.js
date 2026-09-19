@@ -211,7 +211,6 @@ async function startApp() {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('hdr-user').textContent = state.user?.name?.split(' ')[0] ?? '';
-  updateThemeBtn();
 
   const hdr = document.getElementById('hdr');
   if (hdr) {
