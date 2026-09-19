@@ -1384,8 +1384,9 @@ async function saveExpense() {
 
   const isNew = !state.editingExpenseId;
   const payload = {
-    name, amount, accountId,
+    name, amount,
     ...(isNew && {
+      accountId,
       month: parseInt(document.getElementById('e-month').value),
       year:  parseInt(document.getElementById('e-year').value),
     }),
@@ -1489,8 +1490,9 @@ async function saveIncome() {
 
   const isNew = !state.editingIncomeId;
   const payload = {
-    name, amount, accountId,
+    name, amount,
     ...(isNew && {
+      accountId,
       month: parseInt(document.getElementById('i-month').value),
       year:  parseInt(document.getElementById('i-year').value),
     }),
