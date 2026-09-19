@@ -1572,14 +1572,14 @@ async function saveIncome() {
   if (!valid) return;
 
   const isNew = !state.editingIncomeId;
-  const accountId = document.getElementById('i-account').value || undefined;
+  const accountId = document.getElementById('i-account').value || null;
   const payload = {
     name, amount,
     ...(isNew && {
       month: parseInt(document.getElementById('i-month').value),
       year:  parseInt(document.getElementById('i-year').value),
-      ...(accountId && { accountId }),
     }),
+    ...(accountId ? { accountId } : {}),
     recurrence: document.getElementById('i-recurrence').value,
     isPaid:     document.getElementById('i-paid-toggle').classList.contains('on'),
     notes:      document.getElementById('i-notes').value.trim() || undefined,
