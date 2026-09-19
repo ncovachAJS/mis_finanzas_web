@@ -274,6 +274,7 @@ async function changeMonth(delta) {
       const n = (Array.isArray(resE) ? resE.length : 0) + (Array.isArray(resI) ? resI.length : 0);
       if (n > 0) {
         showToast(`${n} recurrentes propagados`, 'success');
+        await fixCuotasAfterPropagation(state.month, state.year);
         await Promise.all([loadGastos(), loadIngresos()]);
         loadDashboard();
       }
@@ -1448,29 +1449,72 @@ function askDeleteExpense(id) {
 async function propagateEditToFuture(endpoint, name, putPayload, fromMonth, fromYear) {
   let updated = 0;
   const cachePrefix = endpoint === 'expenses' ? 'exp' : 'inc';
+  let cuotaNum   = putPayload.cuotaNumber ?? null;
+  const cuotaTotal = putPayload.totalCuotas ?? null;
+
   for (let m = fromMonth + 1; m <= 12; m++) {
+    if (cuotaNum != null) cuotaNum++;
+
     try {
       const items = await api('GET', `/${endpoint}?month=${m}&year=${fromYear}`);
       if (!Array.isArray(items)) continue;
       const match = items.find(i => i.name.toLowerCase() === name.toLowerCase());
+
+      if (cuotaNum != null && cuotaTotal != null && cuotaNum > cuotaTotal) {
+        // Cuotas agotadas — eliminar si existe en este mes
+        if (match) {
+          await api('DELETE', `/${endpoint}/${match.id}`);
+          try { localStorage.removeItem(`cc_${cachePrefix}_${m}_${fromYear}`); } catch(e) {}
+          try { localStorage.removeItem(`cc_dash_${m}_${fromYear}`); } catch(e) {}
+        }
+        continue; // seguir buscando meses con posibles copias sobrantes
+      }
+
       if (match) {
-        await api('PUT', `/${endpoint}/${match.id}`, putPayload);
-        // Invalidate cache for this month so next load is fresh
+        const monthPayload = { ...putPayload };
+        if (cuotaNum != null) monthPayload.cuotaNumber = cuotaNum;
+        await api('PUT', `/${endpoint}/${match.id}`, monthPayload);
         try { localStorage.removeItem(`cc_${cachePrefix}_${m}_${fromYear}`); } catch(e) {}
         try { localStorage.removeItem(`cc_dash_${m}_${fromYear}`); } catch(e) {}
         updated++;
       }
     } catch(e) { /* silencioso */ }
   }
-  // Refresh annual dashboard if visible
   if (activeTab === 'dashboard') loadAnnualDashboard();
   return updated;
+}
+
+// Corrige cuotas tras auto-propagación del backend (que copia el número sin incrementar)
+async function fixCuotasAfterPropagation(month, year) {
+  const prevMonth = month === 1 ? 12 : month - 1;
+  const prevYear  = month === 1 ? year - 1 : year;
+  try {
+    const [current, previous] = await Promise.all([
+      api('GET', `/expenses?month=${month}&year=${year}`),
+      api('GET', `/expenses?month=${prevMonth}&year=${prevYear}`),
+    ]);
+    if (!current || !previous) return;
+    const cuotaItems = current.filter(e => e.cuotaNumber && e.totalCuotas);
+    for (const item of cuotaItems) {
+      const prev = previous.find(p =>
+        p.name.toLowerCase() === item.name.toLowerCase() && p.cuotaNumber
+      );
+      if (!prev) continue;
+      const newCuota = prev.cuotaNumber + 1;
+      if (newCuota > item.totalCuotas) {
+        await api('DELETE', `/expenses/${item.id}`);
+      } else if (newCuota !== item.cuotaNumber) {
+        await api('PUT', `/expenses/${item.id}`, { cuotaNumber: newCuota });
+      }
+    }
+  } catch(e) { /* silencioso */ }
 }
 
 async function propagateExpenses() {
   try {
     const res = await api('POST', '/expenses/propagate', { month: state.month, year: state.year });
     const n = Array.isArray(res) ? res.length : 0;
+    if (n > 0) await fixCuotasAfterPropagation(state.month, state.year);
     showToast(n > 0 ? `${n} gastos propagados` : 'No había recurrentes que propagar', 'success');
     await loadGastos();
   } catch(e) { showToast(e.message || 'Error al propagar', 'error'); }
