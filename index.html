@@ -135,13 +135,47 @@
     <p>¿Tienes recurrentes del mes anterior?</p>
     <button class="btn-s" onclick="propagateExpenses()">↩ Propagar</button>
   </div>
-  <div class="search-row">
-    <input type="text" id="gastos-search" placeholder="🔍 Buscar gasto…" oninput="renderGastos()" class="srch-input">
+  <div class="gf-bar">
+    <input type="text" id="gastos-search" placeholder="🔍 Buscar gasto…" oninput="renderGastos()" class="srch-input gf-search">
+    <button class="gf-toggle-btn" id="gf-toggle-btn" onclick="toggleGastosFilters()">
+      <span>Filtros</span><span id="gf-active-count" class="gf-badge" style="display:none"></span><span id="gf-arrow">▾</span>
+    </button>
   </div>
-  <div class="fbar" id="gastos-filter">
-    <button class="fbtn on" data-filter="all"     onclick="setGastosFilter(this,'all')">Todos</button>
-    <button class="fbtn"    data-filter="paid"    onclick="setGastosFilter(this,'paid')">Pagados</button>
-    <button class="fbtn"    data-filter="pending" onclick="setGastosFilter(this,'pending')">Pendientes</button>
+  <div class="gf-panel" id="gf-panel" style="display:none">
+    <div class="gf-section">
+      <div class="gf-label">Estado</div>
+      <div class="fbar" id="gastos-filter">
+        <button class="fbtn on" data-filter="all"     onclick="setGastosFilter(this,'all')">Todos</button>
+        <button class="fbtn"    data-filter="paid"    onclick="setGastosFilter(this,'paid')">Pagados</button>
+        <button class="fbtn"    data-filter="pending" onclick="setGastosFilter(this,'pending')">Pendientes</button>
+      </div>
+    </div>
+    <div class="gf-section">
+      <div class="gf-label">Categoría</div>
+      <select id="gastos-filter-cat" class="gf-select" onchange="renderGastos()">
+        <option value="">Todas</option>
+      </select>
+    </div>
+    <div class="gf-section">
+      <div class="gf-label">Tipo</div>
+      <select id="gastos-filter-type" class="gf-select" onchange="renderGastos()">
+        <option value="">Todos</option>
+        <option value="FIXED">🔒 Fijo</option>
+        <option value="VARIABLE">📊 Variable</option>
+        <option value="DEBT">💳 Deuda</option>
+        <option value="SAVINGS">🐷 Ahorro</option>
+        <option value="INVESTMENT">📈 Inversión</option>
+        <option value="DONATION">❤️ Donación</option>
+        <option value="OTHER">📦 Otro</option>
+      </select>
+    </div>
+    <div class="gf-section">
+      <div class="gf-label">Cuenta</div>
+      <select id="gastos-filter-account" class="gf-select" onchange="renderGastos()">
+        <option value="">Todas</option>
+      </select>
+    </div>
+    <button class="gf-clear-btn" onclick="clearGastosFilters()">✕ Limpiar filtros</button>
   </div>
   <div class="stats" id="gastos-stats"></div>
   <div id="gastos-content">

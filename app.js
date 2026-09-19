@@ -630,18 +630,74 @@ async function loadGastos() {
   }
 }
 
+function toggleGastosFilters() {
+  const panel = document.getElementById('gf-panel');
+  const arrow = document.getElementById('gf-arrow');
+  const open  = panel.style.display === 'none';
+  panel.style.display = open ? '' : 'none';
+  arrow.textContent   = open ? '▴' : '▾';
+}
+
+function clearGastosFilters() {
+  document.getElementById('gastos-search').value          = '';
+  document.getElementById('gastos-filter-cat').value      = '';
+  document.getElementById('gastos-filter-type').value     = '';
+  document.getElementById('gastos-filter-account').value  = '';
+  document.querySelectorAll('#gastos-filter .fbtn').forEach((b,i) => b.classList.toggle('on', i === 0));
+  state.gastosFilter = 'all';
+  updateGastosFilterBadge();
+  renderGastos();
+}
+
+function updateGastosFilterBadge() {
+  const active = [
+    state.gastosFilter !== 'all',
+    !!(document.getElementById('gastos-search')?.value),
+    !!(document.getElementById('gastos-filter-cat')?.value),
+    !!(document.getElementById('gastos-filter-type')?.value),
+    !!(document.getElementById('gastos-filter-account')?.value),
+  ].filter(Boolean).length;
+  const badge = document.getElementById('gf-active-count');
+  if (badge) {
+    badge.style.display = active > 0 ? '' : 'none';
+    badge.textContent   = active;
+  }
+}
+
+function populateGastosFilterSelects() {
+  const catSel = document.getElementById('gastos-filter-cat');
+  const accSel = document.getElementById('gastos-filter-account');
+  if (catSel && state.categories?.length) {
+    catSel.innerHTML = '<option value="">Todas</option>' +
+      state.categories.map(c => `<option value="${c.id}">${c.icon ? c.icon + ' ' : ''}${esc(c.name)}</option>`).join('');
+  }
+  if (accSel && state.accounts?.length) {
+    accSel.innerHTML = '<option value="">Todas</option>' +
+      state.accounts.map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join('');
+  }
+}
+
 function renderGastos() {
-  const f      = state.gastosFilter;
-  const search = (document.getElementById('gastos-search')?.value || '').toLowerCase();
-  let list     = state.expenses;
+  const f       = state.gastosFilter;
+  const search  = (document.getElementById('gastos-search')?.value || '').toLowerCase();
+  const catId   = document.getElementById('gastos-filter-cat')?.value    || '';
+  const typeVal = document.getElementById('gastos-filter-type')?.value   || '';
+  const accId   = document.getElementById('gastos-filter-account')?.value || '';
+  let list      = state.expenses;
+
   if (f === 'paid')    list = list.filter(e => e.isPaid);
   if (f === 'pending') list = list.filter(e => !e.isPaid);
-  if (search) list = list.filter(e =>
+  if (catId)   list = list.filter(e => String(e.categoryId) === catId);
+  if (typeVal) list = list.filter(e => e.expenseType === typeVal);
+  if (accId)   list = list.filter(e => String(e.accountId) === accId);
+  if (search)  list = list.filter(e =>
     e.name.toLowerCase().includes(search) ||
     (e.notes || '').toLowerCase().includes(search) ||
     (e.categoryName || '').toLowerCase().includes(search) ||
     (e.accountName || '').toLowerCase().includes(search)
   );
+
+  updateGastosFilterBadge();
 
   const total   = state.expenses.reduce((s,e) => s + e.amount, 0);
   const paid    = state.expenses.filter(e => e.isPaid).reduce((s,e) => s + e.amount, 0);
@@ -727,6 +783,7 @@ function setGastosFilter(btn, f) {
   document.querySelectorAll('#gastos-filter .fbtn').forEach(b => b.classList.remove('on'));
   btn.classList.add('on');
   state.gastosFilter = f;
+  updateGastosFilterBadge();
   renderGastos();
 }
 
@@ -822,6 +879,7 @@ async function loadAccounts() {
     state.accounts = data ?? [];
     renderAccounts();
     populateAccountSelect();
+    populateGastosFilterSelects();
   } catch(e) {
     if (el) el.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><h3>Error</h3><p>${e.message}</p></div>`;
   }
@@ -863,6 +921,7 @@ async function loadCategories() {
     const data = await api('GET', '/categories');
     state.categories = data ?? [];
     populateCategorySelect();
+    populateGastosFilterSelects();
   } catch(e) { /* non-critical */ }
 }
 
