@@ -518,7 +518,7 @@ function renderMonthlySavings(months, year) {
     <div class="chart-wrap">
       <div class="sv-total">
         <div>
-          <div class="chart-title" style="margin-bottom:2px">Ahorro mensual</div>
+          <div class="chart-title" style="margin-bottom:2px">Ahorro anual</div>
           <div style="font-size:12px;color:var(--muted)">Ingresos cobrados − gastos pagados</div>
           ${projNote}
         </div>
