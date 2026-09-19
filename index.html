@@ -310,6 +310,12 @@
       <div class="sw"></div>
       <div class="tg-lbl">Marcado como pagado</div>
     </div>
+    <div class="propagate-edit-row" id="e-propagate-row" style="display:none">
+      <div class="toggle-row" id="e-propagate-toggle" onclick="this.classList.toggle('on')">
+        <div class="sw"></div>
+        <div class="tg-lbl">Propagar cambios a meses siguientes</div>
+      </div>
+    </div>
     <div class="modal-btns">
       <button class="btn-s" onclick="closeModal('expense-modal')">Cancelar</button>
       <button class="btn-p" onclick="saveExpense()" id="e-save-btn">Guardar</button>
@@ -368,6 +374,12 @@
     <div class="toggle-row" id="i-paid-toggle" onclick="togglePaid('i')">
       <div class="sw"></div>
       <div class="tg-lbl">Marcado como cobrado</div>
+    </div>
+    <div class="propagate-edit-row" id="i-propagate-row" style="display:none">
+      <div class="toggle-row" id="i-propagate-toggle" onclick="this.classList.toggle('on')">
+        <div class="sw"></div>
+        <div class="tg-lbl">Propagar cambios a meses siguientes</div>
+      </div>
     </div>
     <div class="modal-btns">
       <button class="btn-s" onclick="closeModal('income-modal')">Cancelar</button>

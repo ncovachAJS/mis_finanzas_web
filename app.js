@@ -1338,6 +1338,8 @@ function openExpenseModal(id) {
   document.getElementById('e-cuota-total').value = '';
   document.getElementById('e-cuota-row').style.display = 'none';
   document.getElementById('e-paid-toggle').classList.remove('on');
+  document.getElementById('e-propagate-toggle').classList.remove('on');
+  document.getElementById('e-propagate-row').style.display = isEdit ? '' : 'none';
   ['e-name-err','e-amount-err','e-account-err'].forEach(e => document.getElementById(e).classList.remove('on'));
 
   if (isEdit) {
@@ -1406,7 +1408,12 @@ async function saveExpense() {
   try {
     if (state.editingExpenseId) {
       await api('PUT', `/expenses/${state.editingExpenseId}`, payload);
-      showToast('Gasto actualizado', 'success');
+      if (document.getElementById('e-propagate-toggle').classList.contains('on')) {
+        const n = await propagateEditToFuture('expenses', name, payload, state.month, state.year);
+        showToast(`Gasto actualizado${n > 0 ? ` y propagado a ${n} mes${n > 1 ? 'es' : ''}` : ''}`, 'success');
+      } else {
+        showToast('Gasto actualizado', 'success');
+      }
     } else {
       await api('POST', '/expenses', payload);
       showToast('Gasto añadido', 'success');
@@ -1438,6 +1445,22 @@ function askDeleteExpense(id) {
   openModal('confirm-modal');
 }
 
+async function propagateEditToFuture(endpoint, name, putPayload, fromMonth, fromYear) {
+  let updated = 0;
+  for (let m = fromMonth + 1; m <= 12; m++) {
+    try {
+      const items = await api('GET', `/${endpoint}?month=${m}&year=${fromYear}`);
+      if (!Array.isArray(items)) continue;
+      const match = items.find(i => i.name.toLowerCase() === name.toLowerCase());
+      if (match) {
+        await api('PUT', `/${endpoint}/${match.id}`, putPayload);
+        updated++;
+      }
+    } catch(e) { /* silencioso */ }
+  }
+  return updated;
+}
+
 async function propagateExpenses() {
   try {
     const res = await api('POST', '/expenses/propagate', { month: state.month, year: state.year });
@@ -1460,6 +1483,8 @@ function openIncomeModal(id) {
   document.getElementById('i-month').value      = state.month;
   document.getElementById('i-year').value       = state.year;
   document.getElementById('i-paid-toggle').classList.remove('on');
+  document.getElementById('i-propagate-toggle').classList.remove('on');
+  document.getElementById('i-propagate-row').style.display = isEdit ? '' : 'none';
   ['i-name-err','i-amount-err','i-account-err'].forEach(e => document.getElementById(e).classList.remove('on'));
   if (isEdit) {
     const inc = state.incomes.find(i => i.id === id);
@@ -1508,7 +1533,12 @@ async function saveIncome() {
   try {
     if (state.editingIncomeId) {
       await api('PUT', `/incomes/${state.editingIncomeId}`, payload);
-      showToast('Ingreso actualizado', 'success');
+      if (document.getElementById('i-propagate-toggle').classList.contains('on')) {
+        const n = await propagateEditToFuture('incomes', name, payload, state.month, state.year);
+        showToast(`Ingreso actualizado${n > 0 ? ` y propagado a ${n} mes${n > 1 ? 'es' : ''}` : ''}`, 'success');
+      } else {
+        showToast('Ingreso actualizado', 'success');
+      }
     } else {
       await api('POST', '/incomes', payload);
       showToast('Ingreso añadido', 'success');
