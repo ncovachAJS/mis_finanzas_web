@@ -448,13 +448,16 @@ function renderAnnualDashboard(data) {
 function renderMonthlySavings(months, year) {
   if (!months || !months.length) return '';
   const now = new Date();
-  const isCurrentYear = year === now.getFullYear();
-  const curMonth = isCurrentYear ? now.getMonth() + 1 : 12;
+  const currentYear  = now.getFullYear();
+  const isCurrentYear = year === currentYear;
+  const isFutureYear  = year > currentYear;
 
-  // Split into real (past/current) and future months
+  // For a future year all months are projected; for a past year all are real
+  const curMonth = isCurrentYear ? now.getMonth() + 1 : (isFutureYear ? 0 : 12);
+
   const realMonths   = months.filter(m => m.month <= curMonth);
   const futureMonths = months.filter(m => m.month >  curMonth);
-  if (!realMonths.length) return '';
+  if (!realMonths.length && !isFutureYear) return '';
 
   // For future months: use total (incomes - expenses) regardless of paid status,
   // because propagated items are pending and savings (paid only) = 0.
