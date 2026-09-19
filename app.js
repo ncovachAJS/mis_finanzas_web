@@ -700,6 +700,12 @@ async function loadGastos() {
     const data = await api('GET', `/expenses?month=${state.month}&year=${state.year}`);
     if (data === null) return;
     state.expenses = data ?? [];
+    // Eliminar cuotas que superan el total (datos incorrectos de propagaciones previas)
+    const overdue = state.expenses.filter(e => e.cuotaNumber && e.totalCuotas && e.cuotaNumber > e.totalCuotas);
+    if (overdue.length > 0) {
+      await Promise.all(overdue.map(e => api('DELETE', `/expenses/${e.id}`)));
+      state.expenses = state.expenses.filter(e => !overdue.some(o => o.id === e.id));
+    }
     saveCache(cacheKey, state.expenses);
     renderGastos();
   } catch(e) {
