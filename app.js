@@ -445,27 +445,72 @@ function renderAnnualDashboard(data) {
 }
 
 function renderMonthlySavings(months, year) {
+  if (!months || !months.length) return '';
   const now = new Date();
-  const curMonth = (year === now.getFullYear()) ? now.getMonth() + 1 : 12;
-  const pastMonths = months.filter(m => m.month <= curMonth);
-  if (!pastMonths.length) return '';
+  const isCurrentYear = year === now.getFullYear();
+  const curMonth = isCurrentYear ? now.getMonth() + 1 : 12;
 
-  const annualTotal = pastMonths.reduce((s, m) => s + m.savings, 0);
-  const maxAbs = Math.max(...pastMonths.map(m => Math.abs(m.savings)), 1);
+  // Split into real (past/current) and future months
+  const realMonths   = months.filter(m => m.month <= curMonth);
+  const futureMonths = months.filter(m => m.month >  curMonth);
+  if (!realMonths.length) return '';
+
+  // Projection: average saving of months that actually had activity
+  const activeMonths = realMonths.filter(m => m.totalIncomes > 0 || m.totalExpenses > 0);
+  const avgSaving    = activeMonths.length
+    ? activeMonths.reduce((s, m) => s + m.savings, 0) / activeMonths.length
+    : 0;
+
+  // Real annual total + projected total for remaining months
+  const realTotal   = realMonths.reduce((s, m) => s + m.savings, 0);
+  const projTotal   = futureMonths.length && avgSaving !== 0
+    ? futureMonths.reduce((s, m) => {
+        // Use actual data if the month already has data (user navigated and propagated)
+        const hasDat = m.totalIncomes > 0 || m.totalExpenses > 0;
+        return s + (hasDat ? m.savings : avgSaving);
+      }, 0)
+    : futureMonths.reduce((s, m) => s + m.savings, 0);
+
+  const annualTotal = realTotal + projTotal;
   const totPos = annualTotal >= 0;
 
-  const rows = pastMonths.map(m => {
-    const pos = m.savings >= 0;
-    const pct = Math.min(Math.abs(m.savings) / maxAbs * 100, 100);
+  // Max bar reference across all displayed rows
+  const allSavings = [
+    ...realMonths.map(m => Math.abs(m.savings)),
+    ...futureMonths.map(m => {
+      const hasDat = m.totalIncomes > 0 || m.totalExpenses > 0;
+      return Math.abs(hasDat ? m.savings : avgSaving);
+    }),
+  ];
+  const maxAbs = Math.max(...allSavings, 1);
+
+  const makeRow = (m, isFuture) => {
+    const hasDat   = m.totalIncomes > 0 || m.totalExpenses > 0;
+    const saving   = isFuture && !hasDat ? avgSaving : m.savings;
+    const isProj   = isFuture && !hasDat;
+    const pos      = saving >= 0;
+    const pct      = Math.min(Math.abs(saving) / maxAbs * 100, 100);
     return `
-      <div class="sv-row">
-        <span class="sv-month">${MONTHS_SHORT[m.month - 1]}</span>
+      <div class="sv-row ${isFuture ? 'sv-future' : ''}">
+        <span class="sv-month">${MONTHS_SHORT[m.month - 1]}${isProj ? '<span class="sv-proj-tag">~</span>' : ''}</span>
         <div class="sv-bar-track">
-          <div class="sv-bar-fill ${pos ? 'pos' : 'neg'}" style="width:${pct.toFixed(1)}%"></div>
+          <div class="sv-bar-fill ${pos ? 'pos' : 'neg'}${isProj ? ' proj' : ''}" style="width:${pct.toFixed(1)}%"></div>
         </div>
-        <span class="sv-amount ${pos ? 'c-income' : 'c-expense'}">${pos ? '+' : ''}${fmtEur(m.savings)}</span>
+        <span class="sv-amount ${pos ? 'c-income' : 'c-expense'}" style="${isFuture ? 'opacity:.6' : ''}">${pos ? '+' : ''}${fmtEur(saving)}</span>
       </div>`;
-  }).join('');
+  };
+
+  const rows = [
+    ...realMonths.map(m => makeRow(m, false)),
+    ...(futureMonths.length ? [
+      `<div class="sv-divider"><span>Proyección</span></div>`,
+      ...futureMonths.map(m => makeRow(m, true)),
+    ] : []),
+  ].join('');
+
+  const projNote = futureMonths.length && avgSaving !== 0
+    ? `<div style="font-size:11px;color:var(--faint);margin-top:2px">~ Basado en el promedio de meses con datos</div>`
+    : '';
 
   return `
     <div class="chart-wrap">
@@ -473,8 +518,12 @@ function renderMonthlySavings(months, year) {
         <div>
           <div class="chart-title" style="margin-bottom:2px">Ahorro mensual</div>
           <div style="font-size:12px;color:var(--muted)">Ingresos cobrados − gastos pagados</div>
+          ${projNote}
         </div>
-        <div class="sv-total-amount ${totPos ? 'c-income' : 'c-expense'}">${totPos ? '+' : ''}${fmtEur(annualTotal)}</div>
+        <div>
+          <div class="sv-total-amount ${totPos ? 'c-income' : 'c-expense'}">${totPos ? '+' : ''}${fmtEur(annualTotal)}</div>
+          ${futureMonths.length ? `<div style="font-size:11px;color:var(--faint);text-align:right">proyectado</div>` : ''}
+        </div>
       </div>
       ${rows}
     </div>`;
