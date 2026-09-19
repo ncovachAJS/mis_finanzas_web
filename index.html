@@ -55,7 +55,6 @@
     </div>
     <div class="hdr-right">
       <span class="hdr-user" id="hdr-user"></span>
-      <button class="btn-theme" id="btn-theme" onclick="toggleTheme()" title="Cambiar tema"></button>
       <button class="btn-profile" onclick="openProfileModal()" title="Perfil">👤</button>
     </div>
   </div>
@@ -504,7 +503,14 @@
 
     <!-- Cuenta -->
     <div class="ptab-content" id="pc-cuenta">
-      <div class="slbl">Datos personales</div>
+      <div class="slbl">Apariencia</div>
+      <div class="theme-selector">
+        <button class="theme-opt" id="theme-opt-light"  onclick="setTheme('light')"  title="Claro">☀️ Claro</button>
+        <button class="theme-opt" id="theme-opt-system" onclick="setTheme('system')" title="Sistema">⚙️ Sistema</button>
+        <button class="theme-opt" id="theme-opt-dark"   onclick="setTheme('dark')"   title="Oscuro">🌙 Oscuro</button>
+      </div>
+
+      <div class="slbl" style="margin-top:20px">Datos personales</div>
       <div class="fld"><label>Nombre</label><input type="text" id="p-name" placeholder="Tu nombre"></div>
       <div class="fld"><label>Email</label><input type="email" id="p-email" disabled style="opacity:.5;cursor:not-allowed"></div>
       <div class="fld">

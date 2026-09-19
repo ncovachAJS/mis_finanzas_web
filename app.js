@@ -3,7 +3,7 @@
 ════════════════════════════════════════════════════════════════ */
 (function initTheme() {
   const saved = localStorage.getItem('finanzas_theme');
-  if (saved) document.documentElement.setAttribute('data-theme', saved);
+  if (saved && saved !== 'system') document.documentElement.setAttribute('data-theme', saved);
 })();
 
 /* ═══════════════════════════════════════════════════════════
@@ -1256,30 +1256,25 @@ function askDeleteGoal(id) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   THEME TOGGLE
+   THEME
 ════════════════════════════════════════════════════════════════ */
-function updateThemeBtn() {
-  const btn = document.getElementById('btn-theme');
-  if (!btn) return;
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
-    (!document.documentElement.hasAttribute('data-theme') &&
-     window.matchMedia('(prefers-color-scheme: dark)').matches);
-  btn.textContent = isDark ? '☀️' : '🌙';
-  btn.title = isDark ? 'Cambiar a claro' : 'Cambiar a oscuro';
+function setTheme(value) {
+  if (value === 'system') {
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.removeItem('finanzas_theme');
+  } else {
+    document.documentElement.setAttribute('data-theme', value);
+    localStorage.setItem('finanzas_theme', value);
+  }
+  updateThemeSelector();
 }
 
-function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme');
-  const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  let next;
-  if (!current) {
-    next = systemDark ? 'light' : 'dark';
-  } else {
-    next = current === 'dark' ? 'light' : 'dark';
-  }
-  document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('finanzas_theme', next);
-  updateThemeBtn();
+function updateThemeSelector() {
+  const saved = localStorage.getItem('finanzas_theme');
+  const active = saved || 'system';
+  ['light','system','dark'].forEach(v => {
+    document.getElementById('theme-opt-' + v)?.classList.toggle('on', active === v);
+  });
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1295,6 +1290,7 @@ function openProfileModal() {
   document.getElementById('p-cur-pass').value = '';
   document.getElementById('p-new-pass').value = '';
   document.getElementById('p-pass-err').classList.remove('on');
+  updateThemeSelector();
   showProfileTab('cuenta');
   openModal('profile-modal');
   loadSavingsGoals();
