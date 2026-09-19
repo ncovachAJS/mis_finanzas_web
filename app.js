@@ -935,6 +935,7 @@ function renderIngresos() {
         </div>
         <div class="rfoot">
           <span class="spill ${i.isPaid ? 's-paid' : 's-pending'}">${i.isPaid ? 'Cobrado' : 'Pendiente'}</span>
+          ${(i.accountName || state.accounts.find(a => String(a.id) === String(i.accountId))?.name) ? `<span class="rtag">${esc(i.accountName || state.accounts.find(a => String(a.id) === String(i.accountId))?.name)}</span>` : ''}
           <div class="ractions">
             <button class="act-btn paid-toggle ${i.isPaid ? 'is-paid' : ''}" onclick="toggleIncomePaid('${i.id}',${i.isPaid})">
               ${i.isPaid ? '↩ Pendiente' : '✓ Cobrado'}
@@ -1542,6 +1543,9 @@ function openIncomeModal(id) {
   document.getElementById('i-propagate-toggle').classList.remove('on');
   document.getElementById('i-propagate-row').style.display = isEdit ? '' : 'none';
   ['i-name-err','i-amount-err'].forEach(e => document.getElementById(e).classList.remove('on'));
+  const accSel = document.getElementById('i-account');
+  accSel.innerHTML = '<option value="">Sin cuenta</option>' +
+    state.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
   if (isEdit) {
     const inc = state.incomes.find(i => i.id === id);
     if (inc) {
@@ -1551,6 +1555,7 @@ function openIncomeModal(id) {
       document.getElementById('i-month').value      = inc.month;
       document.getElementById('i-year').value       = inc.year;
       document.getElementById('i-recurrence').value = inc.recurrence ?? 'NONE';
+      accSel.value = inc.accountId ?? '';
       if (inc.isPaid) document.getElementById('i-paid-toggle').classList.add('on');
     }
   }
@@ -1568,11 +1573,13 @@ async function saveIncome() {
   if (!valid) return;
 
   const isNew = !state.editingIncomeId;
+  const accountId = document.getElementById('i-account').value || undefined;
   const payload = {
     name, amount,
     ...(isNew && {
       month: parseInt(document.getElementById('i-month').value),
       year:  parseInt(document.getElementById('i-year').value),
+      ...(accountId && { accountId }),
     }),
     recurrence: document.getElementById('i-recurrence').value,
     isPaid:     document.getElementById('i-paid-toggle').classList.contains('on'),
