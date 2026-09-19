@@ -9,6 +9,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Cuentas Claras">
   <script src="config.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -113,6 +114,15 @@
     <div id="dash-content">
       <div class="ldg"><span class="ldg-dot"></span><span class="ldg-dot"></span><span class="ldg-dot"></span></div>
     </div>
+    <div id="dash-chart-section" style="display:none">
+      <div class="section-hdr" style="margin-top:20px;margin-bottom:12px">
+        <h2>Gastos por categoría</h2>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="cat-chart" width="220" height="220"></canvas>
+        <div id="cat-chart-legend" class="chart-legend"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Anual -->
@@ -156,7 +166,12 @@
   </div>
   <div class="section-hdr">
     <h2>Gastos</h2>
-    <button class="add-btn expense" onclick="openExpenseModal()">＋ Añadir</button>
+    <div class="hdr-actions">
+      <button class="icon-btn" onclick="exportCSV('gastos')" title="Exportar CSV">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+      <button class="add-btn expense" onclick="openExpenseModal()">＋ Añadir</button>
+    </div>
   </div>
   <div class="propagate-row">
     <p>¿Tienes recurrentes del mes anterior?</p>
@@ -219,7 +234,12 @@
   </div>
   <div class="section-hdr">
     <h2>Ingresos</h2>
-    <button class="add-btn income" onclick="openIncomeModal()">＋ Añadir</button>
+    <div class="hdr-actions">
+      <button class="icon-btn" onclick="exportCSV('ingresos')" title="Exportar CSV">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+      <button class="add-btn income" onclick="openIncomeModal()">＋ Añadir</button>
+    </div>
   </div>
   <div class="propagate-row">
     <p>¿Tienes recurrentes del mes anterior?</p>
@@ -507,6 +527,10 @@
         <input type="color" id="cat-color-picker" value="#1e4a58" style="width:44px;height:36px;padding:2px;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;background:none">
         <input type="text" id="cat-color" placeholder="#1e4a58" maxlength="7" style="flex:1">
       </div>
+    </div>
+    <div class="fld">
+      <label>Presupuesto mensual (opcional)</label>
+      <div class="amount-row"><span class="currency-prefix">€</span><input type="number" id="cat-budget" placeholder="0.00" min="0" step="0.01"></div>
     </div>
     <div class="modal-btns">
       <button class="btn-s" onclick="closeModal('category-modal')">Cancelar</button>

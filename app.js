@@ -405,6 +405,7 @@ function renderDashboard(data) {
     </div>
     ${accountBreakdown}
   `;
+  renderCategoryChart();
 }
 
 function renderBudgetAlert(data) {
@@ -1100,17 +1101,34 @@ function renderCategoriesInProfile() {
     el.innerHTML = `<div class="empty" style="padding:24px"><div class="empty-ico">🏷️</div><h3>Sin categorías</h3><p>Crea tu primera categoría.</p></div>`;
     return;
   }
-  el.innerHTML = state.categories.map(c => `
+  el.innerHTML = state.categories.map(c => {
+    const spent = state.expenses
+      .filter(e => String(e.categoryId) === String(c.id))
+      .reduce((s, e) => s + e.amount, 0);
+    const hasBudget = c.budget && c.budget > 0;
+    const pct  = hasBudget ? Math.min(Math.round(spent / c.budget * 100), 100) : 0;
+    const over = hasBudget && spent > c.budget;
+    return `
     <div class="cat-card" id="cat-${c.id}">
       <div class="cat-dot" style="background:${c.color ? c.color + '22' : 'var(--surface-2)'}">
         <span>${c.icon || '🏷️'}</span>
       </div>
-      <div class="cat-info"><div class="cat-name">${esc(c.name)}</div></div>
+      <div class="cat-info">
+        <div class="cat-name">${esc(c.name)}</div>
+        ${hasBudget ? `
+          <div class="cat-budget-row">
+            <div class="cat-budget-bar-wrap">
+              <div class="cat-budget-bar-fill ${over ? 'over' : ''}" style="width:${pct}%;background:${c.color || 'var(--primary)'}"></div>
+            </div>
+            <span class="cat-budget-label ${over ? 'over' : ''}">${fmtEur(spent)} / ${fmtEur(c.budget)}</span>
+          </div>` : ''}
+      </div>
       <div class="cat-actions">
         <button class="btn-s" style="padding:4px 9px;font-size:12px" onclick="openCategoryModal('${c.id}')">✏️</button>
         <button class="btn-danger" style="padding:4px 9px;font-size:12px" onclick="askDeleteCategory('${c.id}')">🗑</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function openCategoryModal(id) {
@@ -1121,6 +1139,7 @@ function openCategoryModal(id) {
   document.getElementById('cat-icon').value  = '';
   document.getElementById('cat-color').value = '#1e4a58';
   document.getElementById('cat-color-picker').value = '#1e4a58';
+  document.getElementById('cat-budget').value = '';
   document.getElementById('cat-name-err').classList.remove('on');
   if (isEdit) {
     const c = state.categories.find(x => x.id === id);
@@ -1130,6 +1149,7 @@ function openCategoryModal(id) {
       const color = c.color || '#1e4a58';
       document.getElementById('cat-color').value = color;
       document.getElementById('cat-color-picker').value = color;
+      document.getElementById('cat-budget').value = c.budget ?? '';
     }
   }
   openModal('category-modal');
@@ -1139,9 +1159,11 @@ async function saveCategory() {
   const name  = document.getElementById('cat-name').value.trim();
   const icon  = document.getElementById('cat-icon').value.trim() || undefined;
   const color = document.getElementById('cat-color').value.trim() || undefined;
+  const budgetVal = parseFloat(document.getElementById('cat-budget').value);
+  const budget = isNaN(budgetVal) || budgetVal <= 0 ? undefined : budgetVal;
   if (!name) { document.getElementById('cat-name-err').classList.add('on'); return; }
   document.getElementById('cat-name-err').classList.remove('on');
-  const payload = { name, icon, color };
+  const payload = { name, icon, color, ...(budget !== undefined ? { budget } : {}) };
   const btn = document.getElementById('cat-save-btn');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
@@ -1816,6 +1838,104 @@ async function confirmDelete() {
   } catch(e) {
     showToast(e.message || 'Error al eliminar', 'error');
   } finally { btn.disabled = false; btn.textContent = 'Eliminar'; state.pendingDeleteFn = null; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CHART — GASTOS POR CATEGORÍA (mensual)
+════════════════════════════════════════════════════════════════ */
+let _catChart = null;
+
+function renderCategoryChart() {
+  const section = document.getElementById('dash-chart-section');
+  if (!section) return;
+
+  const byCategory = {};
+  state.expenses.forEach(e => {
+    const key  = e.categoryId || '__none__';
+    const name = e.categoryName || 'Sin categoría';
+    const color = e.categoryColor || (
+      e.categoryId
+        ? (state.categories.find(c => c.id === e.categoryId)?.color || '#6B7280')
+        : '#6B7280'
+    );
+    if (!byCategory[key]) byCategory[key] = { name, color, total: 0 };
+    byCategory[key].total += e.amount;
+  });
+
+  const entries = Object.values(byCategory).sort((a, b) => b.total - a.total);
+  if (entries.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  const labels = entries.map(e => e.name);
+  const data   = entries.map(e => e.total);
+  const colors = entries.map(e => e.color);
+
+  const canvas = document.getElementById('cat-chart');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  if (_catChart) { _catChart.destroy(); _catChart = null; }
+
+  _catChart = new Chart(canvas, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: 'var(--surface, #fff)', hoverOffset: 6 }] },
+    options: {
+      cutout: '65%',
+      animation: { duration: 400 },
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: { label: ctx => ` ${fmtEur(ctx.parsed)} (${Math.round(ctx.parsed / data.reduce((a,b)=>a+b,0)*100)}%)` }
+      }},
+    },
+  });
+
+  const total = data.reduce((a, b) => a + b, 0);
+  document.getElementById('cat-chart-legend').innerHTML = entries.map((e, i) => `
+    <div class="chart-legend-item">
+      <div class="chart-legend-dot" style="background:${e.color}"></div>
+      <span class="chart-legend-name">${esc(e.name)}</span>
+      <span class="chart-legend-pct">${Math.round(e.total / total * 100)}%</span>
+      <span class="chart-legend-amt">${fmtEur(e.total)}</span>
+    </div>`).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   EXPORT CSV
+════════════════════════════════════════════════════════════════ */
+function exportCSV(type) {
+  const isGastos = type === 'gastos';
+  const items = isGastos ? state.expenses : state.incomes;
+  if (!items.length) { showToast('No hay datos para exportar', 'error'); return; }
+
+  const monthName = MONTHS[state.month - 1];
+  const rows = isGastos
+    ? [['Nombre','Importe','Tipo','Categoría','Cuenta','Recurrencia','Estado','Mes','Año','Notas'],
+       ...items.map(e => [
+         e.name, e.amount,
+         EXPENSE_TYPES[e.expenseType]?.label || '',
+         e.categoryName || '',
+         e.accountName || '',
+         recLabel(e.recurrence) || '',
+         e.isPaid ? 'Pagado' : 'Pendiente',
+         state.month, state.year,
+         e.notes || '',
+       ])]
+    : [['Nombre','Importe','Cuenta','Recurrencia','Estado','Mes','Año','Notas'],
+       ...items.map(i => [
+         i.name, i.amount,
+         i.accountName || '',
+         recLabel(i.recurrence) || '',
+         i.isPaid ? 'Cobrado' : 'Pendiente',
+         state.month, state.year,
+         i.notes || '',
+       ])];
+
+  const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `${type}_${monthName}_${state.year}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 /* ═══════════════════════════════════════════════════════════
