@@ -256,13 +256,29 @@ function populateMonthSelects() {
   });
 }
 
-function changeMonth(delta) {
+async function changeMonth(delta) {
   let m = state.month + delta, y = state.year;
   if (m > 12) { m = 1; y++; }
   if (m < 1)  { m = 12; y--; }
   state.month = m; state.year = y;
   updateMonthLabels();
-  loadDashboard(); loadGastos(); loadIngresos();
+  await Promise.all([loadGastos(), loadIngresos()]);
+  loadDashboard();
+  // Auto-propagate if the month is completely empty
+  if (state.expenses.length === 0 && state.incomes.length === 0) {
+    try {
+      const [resE, resI] = await Promise.all([
+        api('POST', '/expenses/propagate', { month: state.month, year: state.year }),
+        api('POST', '/incomes/propagate',  { month: state.month, year: state.year }),
+      ]);
+      const n = (Array.isArray(resE) ? resE.length : 0) + (Array.isArray(resI) ? resI.length : 0);
+      if (n > 0) {
+        showToast(`${n} recurrentes propagados`, 'success');
+        await Promise.all([loadGastos(), loadIngresos()]);
+        loadDashboard();
+      }
+    } catch(e) { /* silencioso si falla */ }
+  }
 }
 
 function changeYear(delta) {
