@@ -455,48 +455,47 @@ function renderMonthlySavings(months, year) {
   const futureMonths = months.filter(m => m.month >  curMonth);
   if (!realMonths.length) return '';
 
-  // Projection: average saving of months that actually had activity
+  // For future months: use total (incomes - expenses) regardless of paid status,
+  // because propagated items are pending and savings (paid only) = 0.
+  const futureSaving = m => m.totalIncomes - m.totalExpenses;
+
+  // Fallback avg from past months when a future month has no data at all
   const activeMonths = realMonths.filter(m => m.totalIncomes > 0 || m.totalExpenses > 0);
   const avgSaving    = activeMonths.length
     ? activeMonths.reduce((s, m) => s + m.savings, 0) / activeMonths.length
     : 0;
 
-  // Real annual total + projected total for remaining months
-  const realTotal   = realMonths.reduce((s, m) => s + m.savings, 0);
-  const projTotal   = futureMonths.length && avgSaving !== 0
-    ? futureMonths.reduce((s, m) => {
-        // Use actual data if the month already has data (user navigated and propagated)
-        const hasDat = m.totalIncomes > 0 || m.totalExpenses > 0;
-        return s + (hasDat ? m.savings : avgSaving);
-      }, 0)
-    : futureMonths.reduce((s, m) => s + m.savings, 0);
+  const realTotal  = realMonths.reduce((s, m) => s + m.savings, 0);
+  const projTotal  = futureMonths.reduce((s, m) => {
+    const hasDat = m.totalIncomes > 0 || m.totalExpenses > 0;
+    return s + (hasDat ? futureSaving(m) : avgSaving);
+  }, 0);
 
   const annualTotal = realTotal + projTotal;
   const totPos = annualTotal >= 0;
 
-  // Max bar reference across all displayed rows
   const allSavings = [
     ...realMonths.map(m => Math.abs(m.savings)),
     ...futureMonths.map(m => {
       const hasDat = m.totalIncomes > 0 || m.totalExpenses > 0;
-      return Math.abs(hasDat ? m.savings : avgSaving);
+      return Math.abs(hasDat ? futureSaving(m) : avgSaving);
     }),
   ];
   const maxAbs = Math.max(...allSavings, 1);
 
   const makeRow = (m, isFuture) => {
-    const hasDat   = m.totalIncomes > 0 || m.totalExpenses > 0;
-    const saving   = isFuture && !hasDat ? avgSaving : m.savings;
-    const isProj   = isFuture && !hasDat;
-    const pos      = saving >= 0;
-    const pct      = Math.min(Math.abs(saving) / maxAbs * 100, 100);
+    const hasDat = m.totalIncomes > 0 || m.totalExpenses > 0;
+    const saving = isFuture ? (hasDat ? futureSaving(m) : avgSaving) : m.savings;
+    const isEst  = isFuture && !hasDat;   // estimated via avg, no real data
+    const pos    = saving >= 0;
+    const pct    = Math.min(Math.abs(saving) / maxAbs * 100, 100);
     return `
       <div class="sv-row ${isFuture ? 'sv-future' : ''}">
-        <span class="sv-month">${MONTHS_SHORT[m.month - 1]}${isProj ? '<span class="sv-proj-tag">~</span>' : ''}</span>
+        <span class="sv-month">${MONTHS_SHORT[m.month - 1]}${isEst ? '<span class="sv-proj-tag">~</span>' : ''}</span>
         <div class="sv-bar-track">
-          <div class="sv-bar-fill ${pos ? 'pos' : 'neg'}${isProj ? ' proj' : ''}" style="width:${pct.toFixed(1)}%"></div>
+          <div class="sv-bar-fill ${pos ? 'pos' : 'neg'}${isEst ? ' proj' : ''}" style="width:${pct.toFixed(1)}%"></div>
         </div>
-        <span class="sv-amount ${pos ? 'c-income' : 'c-expense'}" style="${isFuture ? 'opacity:.6' : ''}">${pos ? '+' : ''}${fmtEur(saving)}</span>
+        <span class="sv-amount ${pos ? 'c-income' : 'c-expense'}" style="${isFuture ? 'opacity:.7' : ''}">${pos ? '+' : ''}${fmtEur(saving)}</span>
       </div>`;
   };
 
@@ -508,8 +507,11 @@ function renderMonthlySavings(months, year) {
     ] : []),
   ].join('');
 
-  const projNote = futureMonths.length && avgSaving !== 0
-    ? `<div style="font-size:11px;color:var(--faint);margin-top:2px">~ Basado en el promedio de meses con datos</div>`
+  const hasEstMonths = futureMonths.some(m => !(m.totalIncomes > 0 || m.totalExpenses > 0));
+  const projNote = hasEstMonths && avgSaving !== 0
+    ? `<div style="font-size:11px;color:var(--faint);margin-top:2px">~ Meses sin datos: estimado por promedio</div>`
+    : futureMonths.length
+    ? `<div style="font-size:11px;color:var(--faint);margin-top:2px">Incluye ingresos y gastos pendientes</div>`
     : '';
 
   return `
