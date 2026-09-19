@@ -256,6 +256,7 @@ async function startApp() {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('hdr-user').textContent = state.user?.name?.split(' ')[0] ?? '';
+  updateAvatarUI(state.user?.avatar || null);
 
   const hdr = document.getElementById('hdr');
   if (hdr) {
@@ -1335,6 +1336,7 @@ function openProfileModal() {
   document.getElementById('p-new-pass').value = '';
   document.getElementById('p-pass-err').classList.remove('on');
   updateThemeSelector();
+  updateAvatarUI(state.user?.avatar || null);
   showProfileTab('cuenta');
   openModal('profile-modal');
   loadSavingsGoals();
@@ -1346,6 +1348,55 @@ function showProfileTab(which) {
   document.querySelectorAll('.ptab-content').forEach(c => c.style.display = 'none');
   document.getElementById('ptab-' + which).classList.add('on');
   document.getElementById('pc-' + which).style.display = '';
+}
+
+function resizeImageToBase64(file, size = 200) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const s = Math.min(img.width, img.height);
+      const ox = (img.width  - s) / 2;
+      const oy = (img.height - s) / 2;
+      ctx.drawImage(img, ox, oy, s, s, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+function updateAvatarUI(src) {
+  const btn = document.getElementById('btn-profile');
+  if (!btn) return;
+  if (src) {
+    btn.innerHTML = `<img src="${src}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;display:block">`;
+  } else {
+    btn.textContent = '👤';
+  }
+  const prev = document.getElementById('p-avatar-img');
+  if (prev) { prev.src = src || ''; prev.style.display = src ? 'block' : 'none'; }
+  const ico  = document.getElementById('p-avatar-ico');
+  if (ico)  ico.style.display = src ? 'none' : 'block';
+}
+
+async function onAvatarChange(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  try {
+    const base64 = await resizeImageToBase64(file);
+    const data = await api('PATCH', '/auth/profile', { avatar: base64 });
+    if (data) {
+      state.user = { ...state.user, avatar: data.avatar };
+      localStorage.setItem('finanzas_user', JSON.stringify(state.user));
+      updateAvatarUI(data.avatar);
+      showToast('Foto actualizada', 'success');
+    }
+  } catch(e) { showToast('Error al subir imagen', 'error'); }
 }
 
 async function saveProfile() {
