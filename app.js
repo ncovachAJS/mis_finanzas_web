@@ -796,11 +796,26 @@ async function loadGastos() {
   const el = document.getElementById('gastos-content');
   const cacheKey = `exp_${state.month}_${state.year}`;
   const cached = loadCache(cacheKey);
-  if (cached) { state.expenses = cached; renderGastos(); } else el.innerHTML = ldg();
+  if (cached) {
+    state.expenses = cached.map ? cached.map(e => ({
+      ...e,
+      accountName:   e.accountName   ?? e.account?.name   ?? null,
+      categoryName:  e.categoryName  ?? e.category?.name  ?? null,
+      categoryIcon:  e.categoryIcon  ?? e.category?.icon  ?? null,
+      categoryColor: e.categoryColor ?? e.category?.color ?? null,
+    })) : cached;
+    renderGastos();
+  } else el.innerHTML = ldg();
   try {
     const data = await api('GET', `/expenses?month=${state.month}&year=${state.year}`);
     if (data === null) return;
-    state.expenses = data ?? [];
+    state.expenses = (data ?? []).map(e => ({
+      ...e,
+      accountName:   e.account?.name   ?? null,
+      categoryName:  e.category?.name  ?? null,
+      categoryIcon:  e.category?.icon  ?? null,
+      categoryColor: e.category?.color ?? null,
+    }));
     // Eliminar cuotas que superan el total (datos incorrectos de propagaciones previas)
     const overdue = state.expenses.filter(e => e.cuotaNumber && e.totalCuotas && e.cuotaNumber > e.totalCuotas);
     if (overdue.length > 0) {
