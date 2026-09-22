@@ -2,8 +2,13 @@
    THEME
 ════════════════════════════════════════════════════════════════ */
 (function initTheme() {
-  const saved = localStorage.getItem('finanzas_theme');
+  // At page load the user may already be stored (auto-login path)
+  const storedUser = JSON.parse(localStorage.getItem('finanzas_user') || 'null');
+  const uid = storedUser?.id?.slice(0, 8) || '';
+  const key = uid ? 'finanzas_theme_' + uid : 'finanzas_theme';
+  const saved = localStorage.getItem(key);
   if (saved && saved !== 'system') document.documentElement.setAttribute('data-theme', saved);
+  else document.documentElement.removeAttribute('data-theme');
 })();
 
 /* ═══════════════════════════════════════════════════════════
@@ -263,6 +268,7 @@ function resetUserState() {
 function doLogout() {
   clearUserCache();
   resetUserState();
+  document.documentElement.removeAttribute('data-theme');
   state.token = null; state.user = null;
   localStorage.removeItem('finanzas_token');
   localStorage.removeItem('finanzas_user');
@@ -277,6 +283,7 @@ function doLogout() {
 async function startApp() {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
+  applyUserTheme();
   const nameEl = document.getElementById('hdr-user');
   if (nameEl) nameEl.textContent = state.user?.name?.split(' ')[0] ?? '';
   updateAvatarUI(state.user?.avatar || null);
@@ -1355,19 +1362,31 @@ function askDeleteGoal(id) {
 /* ═══════════════════════════════════════════════════════════
    THEME
 ════════════════════════════════════════════════════════════════ */
+function _themeKey() {
+  const uid = state.user?.id?.slice(0, 8) || '';
+  return uid ? 'finanzas_theme_' + uid : 'finanzas_theme';
+}
+
+function applyUserTheme() {
+  const saved = localStorage.getItem(_themeKey());
+  if (saved && saved !== 'system') document.documentElement.setAttribute('data-theme', saved);
+  else document.documentElement.removeAttribute('data-theme');
+  updateThemeSelector();
+}
+
 function setTheme(value) {
   if (value === 'system') {
     document.documentElement.removeAttribute('data-theme');
-    localStorage.removeItem('finanzas_theme');
+    localStorage.removeItem(_themeKey());
   } else {
     document.documentElement.setAttribute('data-theme', value);
-    localStorage.setItem('finanzas_theme', value);
+    localStorage.setItem(_themeKey(), value);
   }
   updateThemeSelector();
 }
 
 function updateThemeSelector() {
-  const saved = localStorage.getItem('finanzas_theme');
+  const saved = localStorage.getItem(_themeKey());
   const active = saved || 'system';
   ['light','system','dark'].forEach(v => {
     document.getElementById('theme-opt-' + v)?.classList.toggle('on', active === v);
