@@ -61,12 +61,13 @@ const fmt = new Intl.NumberFormat('es-ES', { style:'currency', currency:'EUR', m
 function fmtEur(n) { return fmt.format(n ?? 0); }
 
 /* Cache helpers — show stale data instantly, refresh in background */
+function _uid() { return (state.user?.id || '').slice(0, 8); }
 function saveCache(key, data) {
-  try { localStorage.setItem('cc_' + key, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
+  try { localStorage.setItem('cc_' + _uid() + '_' + key, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
 }
 function loadCache(key, maxMs = 8 * 60 * 1000) {
   try {
-    const raw = localStorage.getItem('cc_' + key);
+    const raw = localStorage.getItem('cc_' + _uid() + '_' + key);
     if (!raw) return null;
     const { ts, data } = JSON.parse(raw);
     return (Date.now() - ts < maxMs) ? data : null;
@@ -196,6 +197,7 @@ async function doLogin() {
     const data = await api('POST', '/auth/login', { email, password });
     if (!data) return;
     clearUserCache();
+    resetUserState();
     state.token = data.token ?? data.access_token;
     state.user  = data.user;
     localStorage.setItem('finanzas_token', state.token);
@@ -221,6 +223,7 @@ async function doRegister() {
     const data = await api('POST', '/auth/register', { name, email, password });
     if (!data) return;
     clearUserCache();
+    resetUserState();
     state.token = data.token ?? data.access_token;
     state.user  = data.user;
     localStorage.setItem('finanzas_token', state.token);
@@ -239,8 +242,27 @@ function clearUserCache() {
   } catch(e) {}
 }
 
+function resetUserState() {
+  state.accounts      = [];
+  state.expenses      = [];
+  state.incomes       = [];
+  state.categories    = [];
+  state.savingsGoals  = [];
+  state.historyItems  = [];
+  state.historyTotal  = 0;
+  state.gastosFilter   = 'all';
+  state.ingresosFilter = 'all';
+  state.editingExpenseId  = null;
+  state.editingIncomeId   = null;
+  state.editingAccountId  = null;
+  state.editingGoalId     = null;
+  state.editingCategoryId = null;
+  state.pendingDeleteFn   = null;
+}
+
 function doLogout() {
   clearUserCache();
+  resetUserState();
   state.token = null; state.user = null;
   localStorage.removeItem('finanzas_token');
   localStorage.removeItem('finanzas_user');
