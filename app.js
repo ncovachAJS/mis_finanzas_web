@@ -292,6 +292,7 @@ function showTab(tab) {
   document.getElementById('view-' + tab).classList.add('on');
   activeTab = tab;
   if (tab === 'historial' && state.historyItems.length === 0) loadHistory();
+  if (tab === 'dashboard') loadDashboard();
 }
 
 function showDashTab(which) {
@@ -1568,7 +1569,7 @@ async function saveExpense() {
     }
     closeModal('expense-modal');
     await loadGastos();
-    if (activeTab === 'dashboard') loadDashboard();
+    loadDashboard();
   } catch(e) {
     showToast(e.message || 'Error al guardar', 'error');
   } finally { btn.disabled = false; btn.textContent = 'Guardar'; }
@@ -1742,7 +1743,7 @@ async function saveIncome() {
     }
     closeModal('income-modal');
     await loadIngresos();
-    if (activeTab === 'dashboard') loadDashboard();
+    loadDashboard();
   } catch(e) {
     showToast(e.message || 'Error al guardar', 'error');
   } finally { btn.disabled = false; btn.textContent = 'Guardar'; }
