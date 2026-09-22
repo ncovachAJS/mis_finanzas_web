@@ -1433,6 +1433,27 @@ function updateThemeSelector() {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   QUICK ADD FAB
+════════════════════════════════════════════════════════════════ */
+function openQuickAdd() {
+  const sheet   = document.getElementById('qa-sheet');
+  const backdrop = document.getElementById('qa-backdrop');
+  const fab     = document.getElementById('btn-fab');
+  sheet.style.display   = '';
+  backdrop.style.display = '';
+  fab.classList.add('open');
+  requestAnimationFrame(() => {
+    sheet.style.transform   = 'translateY(0)';
+    sheet.style.opacity     = '1';
+  });
+}
+function closeQuickAdd() {
+  document.getElementById('qa-sheet').style.display    = 'none';
+  document.getElementById('qa-backdrop').style.display = 'none';
+  document.getElementById('btn-fab').classList.remove('open');
+}
+
+/* ═══════════════════════════════════════════════════════════
    PERFIL
 ════════════════════════════════════════════════════════════════ */
 function openProfileModal() {

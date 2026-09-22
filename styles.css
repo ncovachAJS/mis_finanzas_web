@@ -74,6 +74,22 @@ h1{font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;line-heig
 .bnav-badge-wrap{position:relative;display:flex;align-items:center;justify-content:center}
 .bnav-badge{position:absolute;top:-4px;right:-8px;background:var(--accent);color:#fff;border-radius:8px;font-size:9px;font-weight:700;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 4px;line-height:1}
 .bnav-badge:empty,.bnav-badge[data-zero="1"]{display:none}
+.bnav-fab{display:flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:50%;background:var(--accent);border:none;color:#fff;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.35);transition:transform .15s,box-shadow .15s;-webkit-tap-highlight-color:transparent;margin:0 4px;flex-shrink:0}
+.bnav-fab:active{transform:scale(.9);box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.bnav-fab.open{transform:rotate(45deg)}
+/* Quick-add sheet */
+.qa-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:290}
+.qa-sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-radius:24px 24px 0 0;padding:12px 20px 32px;z-index:300;box-shadow:0 -8px 40px rgba(0,0,0,.3)}
+.qa-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
+.qa-title{font-size:13px;font-weight:600;color:var(--muted);text-align:center;margin-bottom:16px;letter-spacing:.04em;text-transform:uppercase}
+.qa-options{display:flex;gap:12px}
+.qa-opt{flex:1;display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 12px;border:none;border-radius:18px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;transition:transform .12s,background .12s;-webkit-tap-highlight-color:transparent}
+.qa-opt:active{transform:scale(.95)}
+.qa-expense{background:rgba(239,68,68,.1);color:#ef4444}
+.qa-income{background:rgba(34,197,94,.1);color:#22c55e}
+.qa-ico{display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:50%;background:currentColor;color:#fff}
+.qa-ico svg{stroke:#fff}
+.qa-lbl{color:var(--text)}
 
 /* MAIN */
 .main{max-width:700px;margin:0 auto;padding:24px 16px;padding-top:calc(env(safe-area-inset-top,0px) + 116px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 100px)}
