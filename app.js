@@ -303,7 +303,6 @@ async function startApp() {
 
   updateMonthLabels();
   populateMonthSelects();
-  populateHistoryFilters();
 
   // Fire all in parallel — backend cold-start hits once, not 5 times
   Promise.all([loadAccounts(), loadCategories(), loadDashboard(), loadGastos(), loadIngresos()]);
@@ -320,7 +319,6 @@ function showTab(tab) {
   document.getElementById('tab-' + tab).classList.add('on');
   document.getElementById('view-' + tab).classList.add('on');
   activeTab = tab;
-  if (tab === 'historial' && state.historyItems.length === 0) loadHistory();
   if (tab === 'dashboard') loadDashboard();
 }
 
@@ -695,30 +693,23 @@ function renderDonutChart(breakdown) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   HISTORIAL
+   HISTORIAL (en perfil, acordeón por año)
 ════════════════════════════════════════════════════════════════ */
-function populateHistoryFilters() {
-  const now = new Date();
-  const mSel = document.getElementById('hist-filter-month');
-  const ySel = document.getElementById('hist-filter-year');
-  if (!mSel || !ySel) return;
-  mSel.innerHTML = '<option value="">Todos los meses</option>' +
-    MONTHS.map((m,i) => `<option value="${i+1}">${m}</option>`).join('');
-  ySel.innerHTML = '<option value="">Todos los años</option>';
-  for (let y = now.getFullYear(); y >= 2020; y--)
-    ySel.innerHTML += `<option value="${y}">${y}</option>`;
+let _histTypeFilter = 'all';
+
+function setHistTypeFilter(btn, type) {
+  document.querySelectorAll('.hist-type-filter .fbtn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  _histTypeFilter = type;
+  renderHistory();
 }
 
 async function loadHistory() {
   const el = document.getElementById('historial-content');
+  if (!el) return;
   el.innerHTML = ldg();
-  const month = document.getElementById('hist-filter-month')?.value || '';
-  const year  = document.getElementById('hist-filter-year')?.value  || '';
-  let url = '/dashboard/history?limit=100';
-  if (month) url += `&month=${month}`;
-  if (year)  url += `&year=${year}`;
   try {
-    const data = await api('GET', url);
+    const data = await api('GET', '/dashboard/history?limit=500');
     if (!data) return;
     state.historyItems = data.items ?? [];
     state.historyTotal = data.total ?? 0;
@@ -728,66 +719,99 @@ async function loadHistory() {
   }
 }
 
-function applyHistoryFilter() { loadHistory(); }
-
 function renderHistory() {
+  const el = document.getElementById('historial-content');
+  if (!el) return;
   const search = (document.getElementById('hist-search')?.value || '').toLowerCase();
   let items = state.historyItems;
+
+  if (_histTypeFilter !== 'all') items = items.filter(i => i.type === _histTypeFilter);
   if (search) items = items.filter(i =>
     i.name.toLowerCase().includes(search) ||
-    (i.accountName || '').toLowerCase().includes(search) ||
+    (i.accountName  || '').toLowerCase().includes(search) ||
     (i.categoryName || '').toLowerCase().includes(search)
   );
 
   if (items.length === 0) {
-    document.getElementById('historial-content').innerHTML = `
-      <div class="empty"><div class="empty-ico">🕐</div><h3>Sin movimientos</h3><p>No hay registros para este filtro.</p></div>`;
+    el.innerHTML = `<div class="empty"><div class="empty-ico">🕐</div><h3>Sin movimientos</h3><p>No hay registros para este filtro.</p></div>`;
     return;
   }
 
-  // Group by year-month
-  const groups = {};
+  // Agrupar por año → mes
+  const byYear = {};
   items.forEach(item => {
-    const key = `${item.year}-${String(item.month).padStart(2,'0')}`;
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(item);
+    if (!byYear[item.year]) byYear[item.year] = {};
+    const mk = String(item.month).padStart(2, '0');
+    if (!byYear[item.year][mk]) byYear[item.year][mk] = [];
+    byYear[item.year][mk].push(item);
   });
 
+  const years = Object.keys(byYear).sort((a,b) => b - a);
+  const mostRecentYear = years[0];
+
   let html = '';
-  Object.keys(groups).sort((a,b) => b.localeCompare(a)).forEach(key => {
-    const [y, m] = key.split('-');
-    const grpTotal = groups[key].reduce((s, i) => s + (i.type === 'income' ? i.amount : -i.amount), 0);
-    const pos = grpTotal >= 0;
-    html += `<div class="hist-month-hdr">
-      <span class="hist-month-name">${MONTHS[parseInt(m)-1]} ${y}</span>
-      <span class="hist-month-net ${pos ? 'pos' : 'neg'}">${pos ? '+' : ''}${fmtEur(grpTotal)}</span>
-    </div>`;
-    html += `<div class="hist-group">`;
-    groups[key].forEach(item => {
-      const isIncome = item.type === 'income';
-      const meta = [
-        isIncome ? null : esc(item.accountName || ''),
-        item.categoryName ? esc(item.categoryName) : null,
-        item.recurrence && item.recurrence !== 'NONE' ? recLabel(item.recurrence) : null,
-      ].filter(Boolean).join(' · ');
-      const paidLabel = item.isPaid ? (isIncome ? 'Cobrado' : 'Pagado') : 'Pendiente';
-      html += `
-        <div class="hist-item">
-          <div class="hist-ico ${item.type}">${isIncome ? '↑' : '↓'}</div>
-          <div class="hist-body">
-            <div class="hist-name">${esc(item.name)}</div>
-            ${meta ? `<div class="hist-meta">${meta}</div>` : ''}
-          </div>
-          <div class="hist-right">
-            <div class="hist-amount ${item.type}">${isIncome ? '+' : '-'}${fmtEur(item.amount)}</div>
-            <span class="hist-status ${item.isPaid ? 's-paid' : 's-pending'}">${paidLabel}</span>
-          </div>
-        </div>`;
+  years.forEach(y => {
+    const yearItems = Object.values(byYear[y]).flat();
+    const yearNet = yearItems.reduce((s, i) => s + (i.type === 'income' ? i.amount : -i.amount), 0);
+    const pos = yearNet >= 0;
+    const isOpen = y === mostRecentYear && !search;
+
+    html += `<div class="hist-year-block">
+      <button class="hist-year-hdr" onclick="toggleHistYear(this)" aria-expanded="${isOpen}">
+        <span class="hist-year-label">${y}</span>
+        <span class="hist-year-net ${pos ? 'pos' : 'neg'}">${pos ? '+' : ''}${fmtEur(yearNet)}</span>
+        <span class="hist-year-chevron">${isOpen ? '▴' : '▾'}</span>
+      </button>
+      <div class="hist-year-body" style="${isOpen ? '' : 'display:none'}">`;
+
+    Object.keys(byYear[y]).sort((a,b) => b - a).forEach(mk => {
+      const monthItems = byYear[y][mk];
+      const mNet = monthItems.reduce((s, i) => s + (i.type === 'income' ? i.amount : -i.amount), 0);
+      const mPos = mNet >= 0;
+      html += `<div class="hist-month-hdr">
+        <span class="hist-month-name">${MONTHS[parseInt(mk)-1]}</span>
+        <span class="hist-month-net ${mPos ? 'pos' : 'neg'}">${mPos ? '+' : ''}${fmtEur(mNet)}</span>
+      </div><div class="hist-group">`;
+
+      monthItems.forEach(item => {
+        const isIncome = item.type === 'income';
+        const meta = [
+          isIncome ? null : esc(item.accountName || ''),
+          item.categoryName ? esc(item.categoryName) : null,
+          item.recurrence && item.recurrence !== 'NONE' ? recLabel(item.recurrence) : null,
+        ].filter(Boolean).join(' · ');
+        const paidLabel = item.isPaid ? (isIncome ? 'Cobrado' : 'Pagado') : 'Pendiente';
+        html += `
+          <div class="hist-item">
+            <div class="hist-ico ${item.type}">${isIncome ? '↑' : '↓'}</div>
+            <div class="hist-body">
+              <div class="hist-name">${esc(item.name)}</div>
+              ${meta ? `<div class="hist-meta">${meta}</div>` : ''}
+            </div>
+            <div class="hist-right">
+              <div class="hist-amount ${item.type}">${isIncome ? '+' : '-'}${fmtEur(item.amount)}</div>
+              <span class="hist-status ${item.isPaid ? 's-paid' : 's-pending'}">${paidLabel}</span>
+            </div>
+          </div>`;
+      });
+      html += `</div>`;
     });
-    html += `</div>`;
+
+    html += `</div></div>`;
   });
-  document.getElementById('historial-content').innerHTML = html;
+
+  el.innerHTML = html;
 }
+
+function toggleHistYear(btn) {
+  const body = btn.nextElementSibling;
+  const open = body.style.display === 'none';
+  body.style.display = open ? '' : 'none';
+  btn.setAttribute('aria-expanded', open);
+  btn.querySelector('.hist-year-chevron').textContent = open ? '▴' : '▾';
+}
+
+function applyHistoryFilter() { renderHistory(); }
 
 /* ═══════════════════════════════════════════════════════════
    GASTOS
@@ -1434,6 +1458,12 @@ function showProfileTab(which) {
   document.querySelectorAll('.ptab-content').forEach(c => c.style.display = 'none');
   document.getElementById('ptab-' + which).classList.add('on');
   document.getElementById('pc-' + which).style.display = '';
+  if (which === 'historial') {
+    _histTypeFilter = 'all';
+    document.querySelectorAll('.hist-type-filter .fbtn').forEach((b,i) => b.classList.toggle('on', i===0));
+    if (document.getElementById('hist-search')) document.getElementById('hist-search').value = '';
+    loadHistory();
+  }
 }
 
 function resizeImageToBase64(file, size = 200) {
