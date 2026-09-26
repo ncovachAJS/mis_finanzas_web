@@ -113,6 +113,28 @@
       <span class="qa-lbl">Nuevo ingreso</span>
     </button>
   </div>
+  <div class="qa-quick" id="qa-quick" style="display:none">
+    <p class="qa-title" style="margin-top:20px;margin-bottom:10px">Gasto rápido</p>
+    <div class="qa-cats" id="qa-cats"></div>
+  </div>
+</div>
+
+<!-- Modal Gasto rápido -->
+<div class="modal" id="quick-expense-modal">
+  <div class="modal-box" style="max-width:340px">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="quick-expense-title">Ocio</div>
+    <div class="fld">
+      <label>Importe <span class="req">*</span></label>
+      <div class="amount-row"><span class="currency-prefix">€</span><input type="number" id="qe-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal"></div>
+      <div class="err-msg" id="qe-amount-err">Introduce un importe válido</div>
+    </div>
+    <div class="fld" style="font-size:12px;color:var(--muted)" id="qe-account-hint"></div>
+    <div class="modal-btns">
+      <button class="btn-s" onclick="closeModal('quick-expense-modal')">Cancelar</button>
+      <button class="btn-p" onclick="saveQuickExpense()" id="qe-save-btn">Guardar</button>
+    </div>
+  </div>
 </div>
 
 <main class="main">

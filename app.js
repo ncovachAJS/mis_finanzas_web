@@ -1764,10 +1764,80 @@ function openQuickAdd() {
   sheet.style.display   = '';
   backdrop.style.display = '';
   fab.classList.add('open');
+  renderQaCats();
   requestAnimationFrame(() => {
     sheet.style.transform   = 'translateY(0)';
     sheet.style.opacity     = '1';
   });
+}
+
+function renderQaCats() {
+  const wrap = document.getElementById('qa-quick');
+  const el   = document.getElementById('qa-cats');
+  if (!state.categories.length || !state.accounts.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  el.innerHTML = state.categories.map(c => `
+    <button class="qa-cat" onclick="closeQuickAdd(); openQuickExpense('${c.id}')">
+      <span class="qa-cat-ico" style="background:${c.color ? c.color + '22' : 'var(--surface-2)'}">${c.icon || '🏷️'}</span>
+      <span class="qa-cat-lbl">${esc(c.name)}</span>
+    </button>`).join('');
+}
+
+/** Cuenta que más se ha usado con esta categoría; si no hay ninguna, la última usada; si no, la primera. */
+function _qaDefaultAccount(categoryId) {
+  const counts = {};
+  state.expenses.forEach(e => {
+    if (String(e.categoryId) === String(categoryId) && e.accountId) {
+      counts[e.accountId] = (counts[e.accountId] || 0) + 1;
+    }
+  });
+  const bestId = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+  const fromHistory = state.accounts.find(a => a.id === bestId);
+  if (fromHistory) return fromHistory;
+  let lastId; try { lastId = localStorage.getItem(`cc_qa_last_account_${_uid()}`); } catch(e) {}
+  return state.accounts.find(a => a.id === lastId) || state.accounts[0];
+}
+
+function openQuickExpense(categoryId) {
+  const cat = state.categories.find(c => c.id === categoryId);
+  const account = _qaDefaultAccount(categoryId);
+  if (!cat || !account) return;
+  state.quickExpenseCategoryId = categoryId;
+  state.quickExpenseAccountId  = account.id;
+  document.getElementById('quick-expense-title').textContent = `${cat.icon ? cat.icon + ' ' : ''}${cat.name}`;
+  document.getElementById('qe-amount').value = '';
+  document.getElementById('qe-amount-err').classList.remove('on');
+  document.getElementById('qe-account-hint').textContent = `Se añadirá a ${account.name} · ${MONTHS[state.month - 1]} ${state.year}`;
+  openModal('quick-expense-modal');
+  setTimeout(() => document.getElementById('qe-amount').focus(), 100);
+}
+
+async function saveQuickExpense() {
+  const amount = parseFloat(document.getElementById('qe-amount').value);
+  if (isNaN(amount) || amount <= 0) { document.getElementById('qe-amount-err').classList.add('on'); return; }
+  document.getElementById('qe-amount-err').classList.remove('on');
+  const cat = state.categories.find(c => c.id === state.quickExpenseCategoryId);
+  const btn = document.getElementById('qe-save-btn');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    await api('POST', '/expenses', {
+      name: cat.name,
+      amount,
+      accountId: state.quickExpenseAccountId,
+      categoryId: cat.id,
+      expenseType: 'VARIABLE',
+      month: state.month,
+      year: state.year,
+      isPaid: true,
+    });
+    try { localStorage.setItem(`cc_qa_last_account_${_uid()}`, state.quickExpenseAccountId); } catch(e) {}
+    showToast(`${cat.icon ? cat.icon + ' ' : ''}${cat.name}: ${fmtEur(amount)} añadido`, 'success');
+    closeModal('quick-expense-modal');
+    await loadGastos();
+    if (activeTab === 'dashboard') loadDashboard();
+  } catch(e) {
+    showToast(e.message || 'Error al guardar', 'error');
+  } finally { btn.disabled = false; btn.textContent = 'Guardar'; }
 }
 function closeQuickAdd() {
   document.getElementById('qa-sheet').style.display    = 'none';
