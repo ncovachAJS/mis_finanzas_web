@@ -1180,7 +1180,7 @@ function renderCategoriesInProfile() {
         <span>${c.icon || '🏷️'}</span>
       </div>
       <div class="cat-info">
-        <div class="cat-name">${esc(c.name)}</div>
+        <div class="cat-name">${esc(c.name)}${c.quickAdd ? ' <span title="Acceso rápido en el botón ＋" style="font-size:11px">⚡</span>' : ''}</div>
         ${hasBudget ? `
           <div class="cat-budget-row">
             <div class="cat-budget-bar-wrap">
@@ -1206,6 +1206,7 @@ function openCategoryModal(id) {
   document.getElementById('cat-color').value = '#1e4a58';
   document.getElementById('cat-color-picker').value = '#1e4a58';
   document.getElementById('cat-budget').value = '';
+  document.getElementById('cat-quickadd-toggle').classList.remove('on');
   document.getElementById('cat-name-err').classList.remove('on');
   if (isEdit) {
     const c = state.categories.find(x => x.id === id);
@@ -1216,6 +1217,7 @@ function openCategoryModal(id) {
       document.getElementById('cat-color').value = color;
       document.getElementById('cat-color-picker').value = color;
       document.getElementById('cat-budget').value = c.budget ?? '';
+      if (c.quickAdd) document.getElementById('cat-quickadd-toggle').classList.add('on');
     }
   }
   openModal('category-modal');
@@ -1229,7 +1231,8 @@ async function saveCategory() {
   const budget = isNaN(budgetVal) || budgetVal <= 0 ? undefined : budgetVal;
   if (!name) { document.getElementById('cat-name-err').classList.add('on'); return; }
   document.getElementById('cat-name-err').classList.remove('on');
-  const payload = { name, icon, color, ...(budget !== undefined ? { budget } : {}) };
+  const quickAdd = document.getElementById('cat-quickadd-toggle').classList.contains('on');
+  const payload = { name, icon, color, quickAdd, ...(budget !== undefined ? { budget } : {}) };
   const btn = document.getElementById('cat-save-btn');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
@@ -1774,9 +1777,10 @@ function openQuickAdd() {
 function renderQaCats() {
   const wrap = document.getElementById('qa-quick');
   const el   = document.getElementById('qa-cats');
-  if (!state.categories.length || !state.accounts.length) { wrap.style.display = 'none'; return; }
+  const cats = state.categories.filter(c => c.quickAdd);
+  if (!cats.length || !state.accounts.length) { wrap.style.display = 'none'; return; }
   wrap.style.display = '';
-  el.innerHTML = state.categories.map(c => `
+  el.innerHTML = cats.map(c => `
     <button class="qa-cat" onclick="closeQuickAdd(); openQuickExpense('${c.id}')">
       <span class="qa-cat-ico" style="background:${c.color ? c.color + '22' : 'var(--surface-2)'}">${c.icon || '🏷️'}</span>
       <span class="qa-cat-lbl">${esc(c.name)}</span>

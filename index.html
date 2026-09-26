@@ -568,6 +568,10 @@
       <label>Presupuesto mensual (opcional)</label>
       <div class="amount-row"><span class="currency-prefix">€</span><input type="number" id="cat-budget" placeholder="0.00" min="0" step="0.01"></div>
     </div>
+    <div class="toggle-row" id="cat-quickadd-toggle" onclick="this.classList.toggle('on')">
+      <div class="sw"></div>
+      <div class="tg-lbl">Mostrar como acceso rápido en el botón ＋</div>
+    </div>
     <div class="modal-btns">
       <button class="btn-s" onclick="closeModal('category-modal')">Cancelar</button>
       <button class="btn-p" onclick="saveCategory()" id="cat-save-btn">Guardar</button>
