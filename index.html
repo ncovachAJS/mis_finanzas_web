@@ -622,6 +622,7 @@
       <button class="ptab on" id="ptab-cuenta"     onclick="showProfileTab('cuenta')">Cuenta</button>
       <button class="ptab"    id="ptab-ahorros"    onclick="showProfileTab('ahorros')">Objetivos</button>
       <button class="ptab"    id="ptab-categorias" onclick="showProfileTab('categorias')">Categorías</button>
+      <button class="ptab"    id="ptab-presupuestos" onclick="showProfileTab('presupuestos')">Presupuestos</button>
       <button class="ptab"    id="ptab-historial"  onclick="showProfileTab('historial')">Historial</button>
     </div>
 
@@ -663,7 +664,7 @@
       <div class="auth-err" id="p-recovery-err" style="margin-bottom:12px"></div>
       <button class="btn-s" style="width:100%;margin-bottom:20px" onclick="regenerateRecoveryCode()" id="p-recovery-btn">Generar nuevo código</button>
 
-      <button class="btn-danger" style="width:100%" onclick="doLogout()">Cerrar sesión</button>
+      <button class="btn-danger" style="width:100%" onclick="askLogout()">Cerrar sesión</button>
     </div>
 
     <!-- Objetivos de ahorro -->
@@ -689,6 +690,11 @@
     </div>
 
     <!-- Historial -->
+    <!-- Presupuestos: vista conjunta del global, por cuenta y por categoría -->
+    <div class="ptab-content" id="pc-presupuestos" style="display:none">
+      <div id="presupuestos-content"></div>
+    </div>
+
     <div class="ptab-content" id="pc-historial" style="display:none">
       <div class="hist-toolbar">
         <input type="text" id="hist-search" placeholder="🔍 Buscar…" oninput="renderHistory()" class="srch-input">
@@ -795,6 +801,19 @@
     <div class="modal-handle"></div>
     <div class="modal-title" id="inv-detail-title">Inversión</div>
     <div id="inv-detail-content"></div>
+  </div>
+</div>
+
+<!-- Modal Confirmar cierre de sesión -->
+<div class="modal" id="logout-confirm-modal">
+  <div class="modal-box" style="max-width:340px">
+    <div class="modal-handle"></div>
+    <div class="modal-title">¿Cerrar sesión?</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px">Tendrás que volver a entrar con tu email y contraseña.</p>
+    <div class="modal-btns">
+      <button class="btn-s" onclick="closeModal('logout-confirm-modal')">Cancelar</button>
+      <button class="btn-danger" style="flex:1" onclick="closeModal('logout-confirm-modal'); doLogout()">Cerrar sesión</button>
+    </div>
   </div>
 </div>
 

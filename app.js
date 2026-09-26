@@ -357,6 +357,10 @@ function resetUserState() {
   state.pendingDeleteFn   = null;
 }
 
+function askLogout() {
+  openModal('logout-confirm-modal');
+}
+
 function doLogout() {
   clearUserCache();
   resetUserState();
@@ -496,6 +500,7 @@ function renderDashboard(data) {
       <div class="balance-hero-amount">${pos ? '+' : ''}${fmtEur(available)}</div>
       <div class="balance-hero-sub">${pos ? '¡Vas bien! Ingresos superan a gastos.' : 'Los gastos superan los ingresos este mes.'}</div>
     </div>
+    ${renderNetWorth()}
     ${hasPending ? `<div class="pending-banner">⚠️ Tienes items pendientes:
       ${pendingI > 0 ? `ingresos por cobrar (${fmtEur(pendingI)})` : ''}
       ${pendingI > 0 && pendingE > 0 ? ' · ' : ''}
@@ -510,6 +515,23 @@ function renderDashboard(data) {
     ${accountBreakdown}
   `;
   renderCategoryChart();
+}
+
+/** Ahorros + inversiones (las "cuentas" son solo agrupaciones de gasto, no tienen saldo). */
+function renderNetWorth() {
+  if (!state.savingsGoals.length && !state.investments.length) return '';
+  const savings     = state.savingsGoals.reduce((s, g) => s + (g.savedAmount || 0), 0);
+  const investments = state.investments.reduce((s, i) => s + (i.currentValue || 0), 0);
+  const total = savings + investments;
+  return `
+    <div class="networth-card">
+      <div class="networth-label">Patrimonio total</div>
+      <div class="networth-amount">${fmtEur(total)}</div>
+      <div class="networth-breakdown">
+        <span>🎯 ${fmtEur(savings)} en ahorros</span>
+        <span>📈 ${fmtEur(investments)} en inversiones</span>
+      </div>
+    </div>`;
 }
 
 function renderBudgetAlert(data) {
@@ -1963,6 +1985,79 @@ function showProfileTab(which) {
     if (document.getElementById('hist-search')) document.getElementById('hist-search').value = '';
     loadHistory();
   }
+  if (which === 'presupuestos') renderBudgetsOverview();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PRESUPUESTOS — vista conjunta del global, por cuenta y por categoría
+════════════════════════════════════════════════════════════════ */
+function _budgetBar(spent, budget) {
+  const pct  = budget > 0 ? Math.min(Math.round(spent / budget * 100), 100) : 0;
+  const over = spent > budget;
+  return `
+    <div class="cat-budget-row">
+      <div class="cat-budget-bar-wrap"><div class="cat-budget-bar-fill ${over ? 'over' : ''}" style="width:${pct}%;background:var(--primary)"></div></div>
+      <span class="cat-budget-label ${over ? 'over' : ''}">${fmtEur(spent)} / ${fmtEur(budget)}${over ? ' · superado' : ''}</span>
+    </div>`;
+}
+
+function renderBudgetsOverview() {
+  const el = document.getElementById('presupuestos-content');
+  if (!el) return;
+  const monthLabel = `${MONTHS[state.month - 1]} ${state.year}`;
+
+  // Global
+  const globalBudget = state.user?.monthlyBudget;
+  const totalSpent = state.expenses.reduce((s, e) => s + e.amount, 0);
+  const globalHtml = globalBudget
+    ? `<div class="bud-item">
+        <div class="bud-item-hdr">
+          <span class="bud-item-name">💰 Presupuesto general</span>
+          <button class="bud-edit-btn" onclick="showProfileTab('cuenta'); document.getElementById('p-budget').focus()" title="Editar">✏️</button>
+        </div>
+        ${_budgetBar(totalSpent, globalBudget)}
+      </div>`
+    : `<div class="bud-empty">No has definido un presupuesto general. <button class="bud-edit-btn" style="text-decoration:underline" onclick="showProfileTab('cuenta'); document.getElementById('p-budget').focus()">Definirlo</button></div>`;
+
+  // Por cuenta
+  const accountsWithBudget = state.accounts.filter(a => a.budget > 0);
+  const accountsHtml = accountsWithBudget.length
+    ? accountsWithBudget.map(a => {
+        const spent = state.expenses.filter(e => String(e.accountId) === String(a.id)).reduce((s, e) => s + e.amount, 0);
+        return `<div class="bud-item">
+          <div class="bud-item-hdr">
+            <span class="bud-item-name">🏦 ${esc(a.name)}</span>
+            <button class="bud-edit-btn" onclick="closeModal('profile-modal'); showTab('cuentas'); openAccountModal('${a.id}')" title="Editar">✏️</button>
+          </div>
+          ${_budgetBar(spent, a.budget)}
+        </div>`;
+      }).join('')
+    : `<div class="bud-empty">Ninguna cuenta tiene presupuesto. Puedes definirlo al editar una cuenta.</div>`;
+
+  // Por categoría
+  const categoriesWithBudget = state.categories.filter(c => c.budget > 0);
+  const categoriesHtml = categoriesWithBudget.length
+    ? categoriesWithBudget.map(c => {
+        const spent = state.expenses.filter(e => String(e.categoryId) === String(c.id)).reduce((s, e) => s + e.amount, 0);
+        return `<div class="bud-item">
+          <div class="bud-item-hdr">
+            <span class="bud-item-name">${c.icon || '🏷️'} ${esc(c.name)}</span>
+            <button class="bud-edit-btn" onclick="showProfileTab('categorias'); openCategoryModal('${c.id}')" title="Editar">✏️</button>
+          </div>
+          ${_budgetBar(spent, c.budget)}
+        </div>`;
+      }).join('')
+    : `<div class="bud-empty">Ninguna categoría tiene presupuesto. Puedes definirlo al editar una categoría.</div>`;
+
+  el.innerHTML = `
+    <p style="font-size:12px;color:var(--faint);margin-bottom:14px">Gastado en ${monthLabel} frente a lo presupuestado. Toca ✏️ para cambiar cualquiera.</p>
+    <div class="bud-section-title">General</div>
+    ${globalHtml}
+    <div class="bud-section-title">Por cuenta</div>
+    ${accountsHtml}
+    <div class="bud-section-title">Por categoría</div>
+    ${categoriesHtml}
+  `;
 }
 
 function resizeImageToBase64(file, size = 200) {
