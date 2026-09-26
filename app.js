@@ -1644,9 +1644,8 @@ async function saveExpense() {
 
   const isNew = !state.editingExpenseId;
   const payload = {
-    name, amount,
+    name, amount, accountId,
     ...(isNew && {
-      accountId,
       month: parseInt(document.getElementById('e-month').value),
       year:  parseInt(document.getElementById('e-year').value),
     }),
