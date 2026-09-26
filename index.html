@@ -223,8 +223,8 @@
   <div class="section-hdr">
     <h2>Gastos</h2>
     <div class="hdr-actions">
-      <button class="icon-btn" onclick="exportCSV('gastos')" title="Exportar CSV">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <button class="icon-btn" onclick="exportPDF('gastos')" title="Exportar PDF">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><polyline points="15 2 15 7 20 7"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
       </button>
       <button class="add-btn expense" onclick="openExpenseModal()">＋ Añadir</button>
     </div>
@@ -287,8 +287,8 @@
   <div class="section-hdr">
     <h2>Ingresos</h2>
     <div class="hdr-actions">
-      <button class="icon-btn" onclick="exportCSV('ingresos')" title="Exportar CSV">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <button class="icon-btn" onclick="exportPDF('ingresos')" title="Exportar PDF">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><polyline points="15 2 15 7 20 7"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
       </button>
       <button class="add-btn income" onclick="openIncomeModal()">＋ Añadir</button>
     </div>
@@ -830,6 +830,8 @@
     </div>
   </div>
 </div>
+
+<div id="print-area"></div>
 
 <script src="app.js"></script>
 </body>

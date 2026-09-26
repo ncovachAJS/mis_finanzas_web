@@ -456,3 +456,16 @@ input[type=date]{color-scheme:light}
   .hist-item{padding:12px}
   .snum{font-size:22px}
 }
+
+/* EXPORTAR PDF: zona oculta que solo se muestra al imprimir.
+   Se ocultan el resto de hijos de <body> con display:none (más fiable entre
+   navegadores que el clásico truco de visibility:hidden). */
+#print-area{display:none}
+body.printing>*:not(#print-area){display:none!important}
+body.printing{background:#fff!important}
+body.printing #print-area{display:block;background:#fff;color:#111}
+#print-area h1{font-family:'DM Serif Display',serif;font-size:20px;font-weight:400;margin-bottom:16px;color:#111}
+#print-area table{width:100%;border-collapse:collapse;font-size:12px;color:#111}
+#print-area th,#print-area td{border:1px solid #ccc;padding:6px 8px;text-align:left}
+#print-area thead{background:#f0f0f0}
+#print-area tfoot td{font-weight:700;border-top:2px solid #333}

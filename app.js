@@ -2671,42 +2671,51 @@ function renderCategoryChart() {
 /* ═══════════════════════════════════════════════════════════
    EXPORT CSV
 ════════════════════════════════════════════════════════════════ */
-function exportCSV(type) {
+/** Rellena la zona imprimible (oculta salvo al imprimir) y abre el diálogo de impresión,
+ *  donde se puede elegir "Guardar como PDF" en vez de una impresora. */
+function exportPDF(type) {
   const isGastos = type === 'gastos';
   const items = isGastos ? state.expenses : state.incomes;
   if (!items.length) { showToast('No hay datos para exportar', 'error'); return; }
 
   const monthName = MONTHS[state.month - 1];
+  const headers = isGastos
+    ? ['Nombre','Importe','Tipo','Categoría','Cuenta','Recurrencia','Estado','Notas']
+    : ['Nombre','Importe','Cuenta','Recurrencia','Estado','Notas'];
   const rows = isGastos
-    ? [['Nombre','Importe','Tipo','Categoría','Cuenta','Recurrencia','Estado','Mes','Año','Notas'],
-       ...items.map(e => [
-         e.name, e.amount,
-         EXPENSE_TYPES[e.expenseType]?.label || '',
-         e.categoryName || '',
-         e.accountName || '',
-         recLabel(e.recurrence) || '',
-         e.isPaid ? 'Pagado' : 'Pendiente',
-         state.month, state.year,
-         e.notes || '',
-       ])]
-    : [['Nombre','Importe','Cuenta','Recurrencia','Estado','Mes','Año','Notas'],
-       ...items.map(i => [
-         i.name, i.amount,
-         i.accountName || '',
-         recLabel(i.recurrence) || '',
-         i.isPaid ? 'Cobrado' : 'Pendiente',
-         state.month, state.year,
-         i.notes || '',
-       ])];
+    ? items.map(e => [
+        e.name, fmtEur(e.amount),
+        EXPENSE_TYPES[e.expenseType]?.label || '',
+        e.categoryName || '',
+        e.accountName || '',
+        recLabel(e.recurrence) || '',
+        e.isPaid ? 'Pagado' : 'Pendiente',
+        e.notes || '',
+      ])
+    : items.map(i => [
+        i.name, fmtEur(i.amount),
+        i.accountName || '',
+        recLabel(i.recurrence) || '',
+        i.isPaid ? 'Cobrado' : 'Pendiente',
+        i.notes || '',
+      ]);
+  const total = items.reduce((s, x) => s + x.amount, 0);
+  const totalRow = headers.map((h, i) => i === 0 ? 'Total' : i === 1 ? fmtEur(total) : '');
 
-  const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = `${type}_${monthName}_${state.year}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+  document.getElementById('print-area').innerHTML = `
+    <h1>${esc(isGastos ? 'Gastos' : 'Ingresos')} — ${esc(monthName)} ${state.year}</h1>
+    <table>
+      <thead><tr>${headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map(r => `<tr>${r.map(c => `<td>${esc(String(c))}</td>`).join('')}</tr>`).join('')}</tbody>
+      <tfoot><tr>${totalRow.map(c => `<td>${esc(c)}</td>`).join('')}</tr></tfoot>
+    </table>`;
+  document.body.classList.add('printing');
+  window.print();
+  // 'afterprint' salta al cerrar el diálogo (se imprima o se cancele). El timeout es
+  // solo una red de seguridad por si algún navegador no llegara a dispararlo.
+  const stopPrinting = () => document.body.classList.remove('printing');
+  window.addEventListener('afterprint', stopPrinting, { once: true });
+  setTimeout(stopPrinting, 60_000);
 }
 
 /* ═══════════════════════════════════════════════════════════
