@@ -62,6 +62,7 @@ const state = {
   contributionInvestmentId: null,
   detailInvestmentId:       null,
   pendingDeleteFn:   null,
+  pendingDeleteFollowingFn: null,
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -112,12 +113,18 @@ function openModal(id) {
   el.style.zIndex = _modalZ;
   el.classList.add('on');
   _enableSwipeToClose(el);
+  if (id === 'confirm-modal') {
+    const hasFollowing = !!state.pendingDeleteFollowingFn;
+    document.getElementById('confirm-following-btn').style.display = hasFollowing ? '' : 'none';
+    document.getElementById('confirm-delete-btn').textContent = hasFollowing ? 'Solo este' : 'Eliminar';
+  }
 }
 function closeModal(id) {
   const el = document.getElementById(id);
   el.classList.remove('on');
   el.style.zIndex = '';
   _modalZ = Math.max(999, _modalZ - 10);
+  if (id === 'confirm-modal') state.pendingDeleteFollowingFn = null;
 }
 
 function _enableSwipeToClose(modalEl) {
@@ -365,22 +372,6 @@ async function changeMonth(delta) {
   updateMonthLabels();
   await Promise.all([loadGastos(), loadIngresos()]);
   loadDashboard();
-  // Auto-propagate if the month is completely empty
-  if (state.expenses.length === 0 && state.incomes.length === 0) {
-    try {
-      const [resE, resI] = await Promise.all([
-        api('POST', '/expenses/propagate', { month: state.month, year: state.year }),
-        api('POST', '/incomes/propagate',  { month: state.month, year: state.year }),
-      ]);
-      const n = (Array.isArray(resE) ? resE.length : 0) + (Array.isArray(resI) ? resI.length : 0);
-      if (n > 0) {
-        showToast(`${n} recurrentes propagados`, 'success');
-        await fixCuotasAfterPropagation(state.month, state.year);
-        await Promise.all([loadGastos(), loadIngresos()]);
-        loadDashboard();
-      }
-    } catch(e) { /* silencioso si falla */ }
-  }
 }
 
 function changeYear(delta) {
@@ -1908,6 +1899,136 @@ async function savePassword() {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   REPETIR HASTA (gastos e ingresos recurrentes)
+════════════════════════════════════════════════════════════════ */
+const REC_STEP = { NONE: 0, MONTHLY: 1, BIMONTHLY: 2, QUARTERLY: 3, SEMIANNUAL: 6, ANNUAL: 12 };
+const monthIdx = (m, y) => y * 12 + (m - 1);
+const idxLabel = idx => `${MONTHS[idx % 12].toLowerCase()} ${Math.floor(idx / 12)}`;
+const idxToInput = idx => `${Math.floor(idx / 12)}-${String(idx % 12 + 1).padStart(2, '0')}`;
+
+/** Prepara el campo al abrir el modal: en uno nuevo "Repetir hasta" (12 meses), al editar "Ampliar". */
+function resetRepeatField(pfx, isEdit) {
+  const sel = document.getElementById(`${pfx}-repeat`);
+  sel.dataset.edit = isEdit ? '1' : '';
+  sel.dataset.auto = '1';
+  sel.innerHTML =
+    `<option value="none">${isEdit ? 'No ampliar' : 'No repetir'}</option>` +
+    (pfx === 'e' ? '<option value="cuotas">Hasta la última cuota</option>' : '') +
+    '<option value="3">3 meses</option><option value="6">6 meses</option>' +
+    '<option value="12">12 meses</option><option value="24">24 meses</option>' +
+    '<option value="eoy">Hasta fin de año</option><option value="custom">Elegir mes…</option>';
+  sel.value = isEdit ? 'none' : '12';
+  document.getElementById(`${pfx}-repeat-lbl`).textContent = isEdit ? 'Ampliar repetición hasta' : 'Repetir hasta';
+  document.getElementById(`${pfx}-repeat-custom`).value = '';
+  updateRepeatField(pfx);
+}
+
+/** Cuota actual y total si el gasto es una deuda con cuotas. */
+function expenseCuotas() {
+  if (document.getElementById('e-type').value !== 'DEBT') return null;
+  const num   = parseInt(document.getElementById('e-cuota-num').value);
+  const total = parseInt(document.getElementById('e-cuota-total').value);
+  return num > 0 && total >= num ? { num, total } : null;
+}
+
+/** Índice del último mes elegido (incluido), o null si no hay que repetir. */
+function repeatUntilIdx(pfx) {
+  const step  = REC_STEP[document.getElementById(`${pfx}-recurrence`).value] || 0;
+  const opt   = document.getElementById(`${pfx}-repeat`).value;
+  const y     = parseInt(document.getElementById(`${pfx}-year`).value);
+  const start = monthIdx(parseInt(document.getElementById(`${pfx}-month`).value), y);
+  if (!step || opt === 'none' || isNaN(start)) return null;
+  if (opt === 'eoy') return monthIdx(12, y);
+  if (opt === 'custom') {
+    const v = document.getElementById(`${pfx}-repeat-custom`).value;
+    if (!v) return null;
+    const [yy, mm] = v.split('-').map(Number);
+    return monthIdx(mm, yy);
+  }
+  if (opt === 'cuotas') {
+    const c = expenseCuotas();
+    return c ? start + (c.total - c.num) * step : null;
+  }
+  return start + parseInt(opt) - 1;
+}
+
+function updateRepeatField(pfx) {
+  const rec  = document.getElementById(`${pfx}-recurrence`).value;
+  const step = REC_STEP[rec] || 0;
+  document.getElementById(`${pfx}-repeat-fld`).style.display = step ? '' : 'none';
+  if (!step) return;
+
+  const sel    = document.getElementById(`${pfx}-repeat`);
+  const isEdit = sel.dataset.edit === '1';
+  const cuotas = pfx === 'e' ? expenseCuotas() : null;
+  const cuotaOpt = sel.querySelector('option[value="cuotas"]');
+  if (cuotaOpt) {
+    cuotaOpt.hidden = !cuotas;
+    if (!cuotas && sel.value === 'cuotas') sel.value = isEdit ? 'none' : '12';
+    // En un gasto nuevo con cuotas, por defecto hasta la última (si no se ha elegido otra cosa)
+    if (cuotas && !isEdit && sel.dataset.auto) sel.value = 'cuotas';
+  }
+
+  const start  = monthIdx(parseInt(document.getElementById(`${pfx}-month`).value), parseInt(document.getElementById(`${pfx}-year`).value));
+  const custom = document.getElementById(`${pfx}-repeat-custom`);
+  custom.style.display = sel.value === 'custom' ? '' : 'none';
+  if (sel.value === 'custom' && !custom.value && !isNaN(start)) custom.value = idxToInput(start + 11);
+
+  const hint  = document.getElementById(`${pfx}-repeat-hint`);
+  const until = repeatUntilIdx(pfx);
+  if (until === null) { hint.textContent = isEdit ? '' : 'Solo se creará en este mes.'; return; }
+  if (isEdit) { hint.textContent = `Se añadirán los meses que falten hasta ${idxLabel(until)}.`; return; }
+  let count = Math.max(Math.floor((until - start) / step), 0);
+  if (cuotas) count = Math.min(count, cuotas.total - cuotas.num);
+  hint.textContent = count
+    ? `Se creará también en ${count} ${count === 1 ? 'mes' : 'meses'} más, hasta ${idxLabel(start + count * step)}.`
+    : 'No hay más meses en ese periodo: solo se creará en este mes.';
+}
+
+/** { untilMonth, untilYear } del campo, o null. */
+function repeatUntil(pfx) {
+  const idx = repeatUntilIdx(pfx);
+  return idx === null ? null : { untilMonth: idx % 12 + 1, untilYear: Math.floor(idx / 12) };
+}
+
+/** Guarda la edición (y, si se pide, en los meses siguientes y/o ampliando la serie). Devuelve el aviso. */
+async function updateRecurring(kind, id, payload, pfx, until, label) {
+  const applyToFollowing = document.getElementById(`${pfx}-propagate-toggle`).classList.contains('on');
+  const res = await api('PUT', `/${kind}/${id}`, { ...payload, ...(applyToFollowing && { applyToFollowing }) });
+  const parts = [];
+  if (res?.updatedFollowing) parts.push(`cambiado en ${res.updatedFollowing} ${res.updatedFollowing === 1 ? 'mes' : 'meses'} más`);
+  if (until) {
+    const rep = await api('POST', `/${kind}/${id}/repeat`, until);
+    if (rep?.created) parts.push(`añadido en ${rep.created} ${rep.created === 1 ? 'mes' : 'meses'} más`);
+  }
+  return `${label} actualizado${parts.length ? ': ' + parts.join(' y ') : ''}`;
+}
+
+/** Borrar solo este o también los siguientes, si es recurrente. */
+function askDeleteRecurring(kind, item, reload) {
+  const label = kind === 'expenses' ? 'gasto' : 'ingreso';
+  const recurring = item && (item.seriesId || (item.recurrence && item.recurrence !== 'NONE'));
+  document.getElementById('confirm-msg').textContent = recurring
+    ? `Este ${label} se repite. ¿Quieres eliminar solo el de este mes o también los de los meses siguientes?`
+    : `¿Eliminar este ${label}? Esta acción no se puede deshacer.`;
+  const done = async msg => {
+    showToast(msg);
+    await reload();
+    if (activeTab === 'dashboard') loadDashboard();
+  };
+  state.pendingDeleteFn = async () => {
+    await api('DELETE', `/${kind}/${item.id}`);
+    await done(`${label[0].toUpperCase() + label.slice(1)} eliminado`);
+  };
+  state.pendingDeleteFollowingFn = recurring ? async () => {
+    const res = await api('DELETE', `/${kind}/${item.id}?scope=following`);
+    const n = res?.deleted ?? 0;
+    await done(`${n} ${label}${n === 1 ? '' : 's'} eliminado${n === 1 ? '' : 's'}`);
+  } : null;
+  openModal('confirm-modal');
+}
+
+/* ═══════════════════════════════════════════════════════════
    MODAL GASTO
 ════════════════════════════════════════════════════════════════ */
 function openExpenseModal(id) {
@@ -1947,12 +2068,14 @@ function openExpenseModal(id) {
       if (exp.isPaid) document.getElementById('e-paid-toggle').classList.add('on');
     }
   }
+  resetRepeatField('e', isEdit);
   openModal('expense-modal');
 }
 
 function onExpenseTypeChange() {
   const type = document.getElementById('e-type').value;
   document.getElementById('e-cuota-row').style.display = type === 'DEBT' ? '' : 'none';
+  updateRepeatField('e');
 }
 
 async function saveExpense() {
@@ -1988,21 +2111,16 @@ async function saveExpense() {
     cuotaNumber: cuotaNum,
     totalCuotas: cuotaTotal,
   };
+  const until = repeatUntil('e');
 
   const btn = document.getElementById('e-save-btn');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
     if (state.editingExpenseId) {
-      await api('PUT', `/expenses/${state.editingExpenseId}`, payload);
-      if (document.getElementById('e-propagate-toggle').classList.contains('on')) {
-        const n = await propagateEditToFuture('expenses', name, payload, state.month, state.year);
-        showToast(`Gasto actualizado${n > 0 ? ` y propagado a ${n} mes${n > 1 ? 'es' : ''}` : ''}`, 'success');
-      } else {
-        showToast('Gasto actualizado', 'success');
-      }
+      showToast(await updateRecurring('expenses', state.editingExpenseId, payload, 'e', until, 'Gasto'), 'success');
     } else {
-      await api('POST', '/expenses', payload);
-      showToast('Gasto añadido', 'success');
+      const res = await api('POST', '/expenses', { ...payload, ...(until && { repeatUntilMonth: until.untilMonth, repeatUntilYear: until.untilYear }) });
+      showToast(res?.repeated ? `Gasto añadido en este mes y ${res.repeated} más` : 'Gasto añadido', 'success');
     }
     closeModal('expense-modal');
     await loadGastos();
@@ -2021,88 +2139,7 @@ async function toggleExpensePaid(id, currentPaid) {
 }
 
 function askDeleteExpense(id) {
-  document.getElementById('confirm-msg').textContent = '¿Eliminar este gasto? Esta acción no se puede deshacer.';
-  state.pendingDeleteFn = async () => {
-    await api('DELETE', `/expenses/${id}`);
-    showToast('Gasto eliminado');
-    await loadGastos();
-    if (activeTab === 'dashboard') loadDashboard();
-  };
-  openModal('confirm-modal');
-}
-
-async function propagateEditToFuture(endpoint, name, putPayload, fromMonth, fromYear) {
-  let updated = 0;
-  const cachePrefix = endpoint === 'expenses' ? 'exp' : 'inc';
-  let cuotaNum   = putPayload.cuotaNumber ?? null;
-  const cuotaTotal = putPayload.totalCuotas ?? null;
-
-  for (let m = fromMonth + 1; m <= 12; m++) {
-    if (cuotaNum != null) cuotaNum++;
-
-    try {
-      const items = await api('GET', `/${endpoint}?month=${m}&year=${fromYear}`);
-      if (!Array.isArray(items)) continue;
-      const match = items.find(i => i.name.toLowerCase() === name.toLowerCase());
-
-      if (cuotaNum != null && cuotaTotal != null && cuotaNum > cuotaTotal) {
-        // Cuotas agotadas — eliminar si existe en este mes
-        if (match) {
-          await api('DELETE', `/${endpoint}/${match.id}`);
-          try { localStorage.removeItem(`cc_${cachePrefix}_${m}_${fromYear}`); } catch(e) {}
-          try { localStorage.removeItem(`cc_dash_${m}_${fromYear}`); } catch(e) {}
-        }
-        continue; // seguir buscando meses con posibles copias sobrantes
-      }
-
-      if (match) {
-        const monthPayload = { ...putPayload };
-        if (cuotaNum != null) monthPayload.cuotaNumber = cuotaNum;
-        await api('PUT', `/${endpoint}/${match.id}`, monthPayload);
-        try { localStorage.removeItem(`cc_${cachePrefix}_${m}_${fromYear}`); } catch(e) {}
-        try { localStorage.removeItem(`cc_dash_${m}_${fromYear}`); } catch(e) {}
-        updated++;
-      }
-    } catch(e) { /* silencioso */ }
-  }
-  if (activeTab === 'dashboard') loadAnnualDashboard();
-  return updated;
-}
-
-// Corrige cuotas tras auto-propagación del backend (que copia el número sin incrementar)
-async function fixCuotasAfterPropagation(month, year) {
-  const prevMonth = month === 1 ? 12 : month - 1;
-  const prevYear  = month === 1 ? year - 1 : year;
-  try {
-    const [current, previous] = await Promise.all([
-      api('GET', `/expenses?month=${month}&year=${year}`),
-      api('GET', `/expenses?month=${prevMonth}&year=${prevYear}`),
-    ]);
-    if (!current || !previous) return;
-    const cuotaItems = current.filter(e => e.cuotaNumber && e.totalCuotas);
-    for (const item of cuotaItems) {
-      const prev = previous.find(p =>
-        p.name.toLowerCase() === item.name.toLowerCase() && p.cuotaNumber
-      );
-      if (!prev) continue;
-      const newCuota = prev.cuotaNumber + 1;
-      if (newCuota > item.totalCuotas) {
-        await api('DELETE', `/expenses/${item.id}`);
-      } else if (newCuota !== item.cuotaNumber) {
-        await api('PUT', `/expenses/${item.id}`, { cuotaNumber: newCuota });
-      }
-    }
-  } catch(e) { /* silencioso */ }
-}
-
-async function propagateExpenses() {
-  try {
-    const res = await api('POST', '/expenses/propagate', { month: state.month, year: state.year });
-    const n = Array.isArray(res) ? res.length : 0;
-    if (n > 0) await fixCuotasAfterPropagation(state.month, state.year);
-    showToast(n > 0 ? `${n} gastos propagados` : 'No había recurrentes que propagar', 'success');
-    await loadGastos();
-  } catch(e) { showToast(e.message || 'Error al propagar', 'error'); }
+  askDeleteRecurring('expenses', state.expenses.find(x => x.id === id) ?? { id }, loadGastos);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -2136,6 +2173,7 @@ function openIncomeModal(id) {
       if (inc.isPaid) document.getElementById('i-paid-toggle').classList.add('on');
     }
   }
+  resetRepeatField('i', isEdit);
   openModal('income-modal');
 }
 
@@ -2162,21 +2200,16 @@ async function saveIncome() {
     isPaid:     document.getElementById('i-paid-toggle').classList.contains('on'),
     notes:      document.getElementById('i-notes').value.trim() || undefined,
   };
+  const until = repeatUntil('i');
 
   const btn = document.getElementById('i-save-btn');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
     if (state.editingIncomeId) {
-      await api('PUT', `/incomes/${state.editingIncomeId}`, payload);
-      if (document.getElementById('i-propagate-toggle').classList.contains('on')) {
-        const n = await propagateEditToFuture('incomes', name, payload, state.month, state.year);
-        showToast(`Ingreso actualizado${n > 0 ? ` y propagado a ${n} mes${n > 1 ? 'es' : ''}` : ''}`, 'success');
-      } else {
-        showToast('Ingreso actualizado', 'success');
-      }
+      showToast(await updateRecurring('incomes', state.editingIncomeId, payload, 'i', until, 'Ingreso'), 'success');
     } else {
-      await api('POST', '/incomes', payload);
-      showToast('Ingreso añadido', 'success');
+      const res = await api('POST', '/incomes', { ...payload, ...(until && { repeatUntilMonth: until.untilMonth, repeatUntilYear: until.untilYear }) });
+      showToast(res?.repeated ? `Ingreso añadido en este mes y ${res.repeated} más` : 'Ingreso añadido', 'success');
     }
     closeModal('income-modal');
     await loadIngresos();
@@ -2195,23 +2228,7 @@ async function toggleIncomePaid(id, currentPaid) {
 }
 
 function askDeleteIncome(id) {
-  document.getElementById('confirm-msg').textContent = '¿Eliminar este ingreso? Esta acción no se puede deshacer.';
-  state.pendingDeleteFn = async () => {
-    await api('DELETE', `/incomes/${id}`);
-    showToast('Ingreso eliminado');
-    await loadIngresos();
-    if (activeTab === 'dashboard') loadDashboard();
-  };
-  openModal('confirm-modal');
-}
-
-async function propagateIncomes() {
-  try {
-    const res = await api('POST', '/incomes/propagate', { month: state.month, year: state.year });
-    const n = Array.isArray(res) ? res.length : 0;
-    showToast(n > 0 ? `${n} ingresos propagados` : 'No había recurrentes que propagar', 'success');
-    await loadIngresos();
-  } catch(e) { showToast(e.message || 'Error al propagar', 'error'); }
+  askDeleteRecurring('incomes', state.incomes.find(x => x.id === id) ?? { id }, loadIngresos);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -2266,16 +2283,19 @@ function askDeleteAccount(id) {
 /* ═══════════════════════════════════════════════════════════
    MODAL CONFIRMACIÓN
 ════════════════════════════════════════════════════════════════ */
-async function confirmDelete() {
-  if (!state.pendingDeleteFn) return;
-  const btn = document.querySelector('#confirm-modal .btn-danger');
+async function confirmDelete(following = false) {
+  const fn = following ? state.pendingDeleteFollowingFn : state.pendingDeleteFn;
+  if (!fn) return;
+  const btn = document.getElementById(following ? 'confirm-following-btn' : 'confirm-delete-btn');
+  const label = btn.textContent;
   btn.disabled = true; btn.textContent = 'Eliminando…';
   try {
-    await state.pendingDeleteFn();
+    await fn();
+    state.pendingDeleteFn = null;
     closeModal('confirm-modal');
   } catch(e) {
     showToast(e.message || 'Error al eliminar', 'error');
-  } finally { btn.disabled = false; btn.textContent = 'Eliminar'; state.pendingDeleteFn = null; }
+  } finally { btn.disabled = false; btn.textContent = label; }
 }
 
 /* ═══════════════════════════════════════════════════════════

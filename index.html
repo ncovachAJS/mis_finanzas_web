@@ -175,10 +175,6 @@
       <button class="add-btn expense" onclick="openExpenseModal()">＋ Añadir</button>
     </div>
   </div>
-  <div class="propagate-row">
-    <p>¿Tienes recurrentes del mes anterior?</p>
-    <button class="btn-s" onclick="propagateExpenses()">↩ Propagar</button>
-  </div>
   <div class="gf-bar">
     <input type="text" id="gastos-search" placeholder="🔍 Buscar gasto…" oninput="renderGastos()" class="srch-input gf-search">
     <button class="gf-toggle-btn" id="gf-toggle-btn" onclick="toggleGastosFilters()">
@@ -242,10 +238,6 @@
       </button>
       <button class="add-btn income" onclick="openIncomeModal()">＋ Añadir</button>
     </div>
-  </div>
-  <div class="propagate-row">
-    <p>¿Tienes recurrentes del mes anterior?</p>
-    <button class="btn-s" onclick="propagateIncomes()">↩ Propagar</button>
   </div>
   <div class="search-row">
     <input type="text" id="ingresos-search" placeholder="🔍 Buscar ingreso…" oninput="renderIngresos()" class="srch-input">
@@ -324,9 +316,9 @@
     <div class="fld" id="e-cuota-row" style="display:none">
       <label>Cuota</label>
       <div style="display:flex;gap:8px;align-items:center">
-        <input type="number" id="e-cuota-num" placeholder="Nº actual" min="1" style="flex:1">
+        <input type="number" id="e-cuota-num" placeholder="Nº actual" min="1" style="flex:1" oninput="updateRepeatField('e')">
         <span style="color:var(--muted);white-space:nowrap">de</span>
-        <input type="number" id="e-cuota-total" placeholder="Total" min="1" style="flex:1">
+        <input type="number" id="e-cuota-total" placeholder="Total" min="1" style="flex:1" oninput="updateRepeatField('e')">
       </div>
     </div>
     <div class="fld">
@@ -345,13 +337,13 @@
     <div class="fld">
       <label>Mes y año</label>
       <div style="display:flex;gap:8px">
-        <select id="e-month" style="flex:1"></select>
-        <input type="number" id="e-year" min="2020" max="2099" style="width:90px;flex:none">
+        <select id="e-month" style="flex:1" onchange="updateRepeatField('e')"></select>
+        <input type="number" id="e-year" min="2020" max="2099" style="width:90px;flex:none" oninput="updateRepeatField('e')">
       </div>
     </div>
     <div class="fld">
       <label>Recurrencia</label>
-      <select id="e-recurrence">
+      <select id="e-recurrence" onchange="updateRepeatField('e')">
         <option value="NONE">Sin recurrencia</option>
         <option value="MONTHLY">Mensual</option>
         <option value="BIMONTHLY">Bimestral</option>
@@ -359,6 +351,12 @@
         <option value="SEMIANNUAL">Semestral</option>
         <option value="ANNUAL">Anual</option>
       </select>
+    </div>
+    <div class="fld" id="e-repeat-fld" style="display:none">
+      <label id="e-repeat-lbl">Repetir hasta</label>
+      <select id="e-repeat" onchange="this.dataset.auto='';updateRepeatField('e')"></select>
+      <input type="month" id="e-repeat-custom" onchange="updateRepeatField('e')" style="display:none;margin-top:8px">
+      <div class="repeat-hint" id="e-repeat-hint"></div>
     </div>
 
     <div class="slbl">Estado</div>
@@ -369,7 +367,7 @@
     <div class="propagate-edit-row" id="e-propagate-row" style="display:none">
       <div class="toggle-row" id="e-propagate-toggle" onclick="this.classList.toggle('on')">
         <div class="sw"></div>
-        <div class="tg-lbl">Propagar cambios a meses siguientes</div>
+        <div class="tg-lbl">Aplicar cambios también a los meses siguientes</div>
       </div>
     </div>
     <div class="modal-btns">
@@ -405,8 +403,8 @@
     <div class="fld">
       <label>Mes y año</label>
       <div style="display:flex;gap:8px">
-        <select id="i-month" style="flex:1"></select>
-        <input type="number" id="i-year" min="2020" max="2099" style="width:90px;flex:none">
+        <select id="i-month" style="flex:1" onchange="updateRepeatField('i')"></select>
+        <input type="number" id="i-year" min="2020" max="2099" style="width:90px;flex:none" oninput="updateRepeatField('i')">
       </div>
     </div>
     <div class="fld">
@@ -418,7 +416,7 @@
     </div>
     <div class="fld">
       <label>Recurrencia</label>
-      <select id="i-recurrence">
+      <select id="i-recurrence" onchange="updateRepeatField('i')">
         <option value="NONE">Sin recurrencia</option>
         <option value="MONTHLY">Mensual</option>
         <option value="BIMONTHLY">Bimestral</option>
@@ -426,6 +424,12 @@
         <option value="SEMIANNUAL">Semestral</option>
         <option value="ANNUAL">Anual</option>
       </select>
+    </div>
+    <div class="fld" id="i-repeat-fld" style="display:none">
+      <label id="i-repeat-lbl">Repetir hasta</label>
+      <select id="i-repeat" onchange="this.dataset.auto='';updateRepeatField('i')"></select>
+      <input type="month" id="i-repeat-custom" onchange="updateRepeatField('i')" style="display:none;margin-top:8px">
+      <div class="repeat-hint" id="i-repeat-hint"></div>
     </div>
 
     <div class="slbl">Estado</div>
@@ -436,7 +440,7 @@
     <div class="propagate-edit-row" id="i-propagate-row" style="display:none">
       <div class="toggle-row" id="i-propagate-toggle" onclick="this.classList.toggle('on')">
         <div class="sw"></div>
-        <div class="tg-lbl">Propagar cambios a meses siguientes</div>
+        <div class="tg-lbl">Aplicar cambios también a los meses siguientes</div>
       </div>
     </div>
     <div class="modal-btns">
@@ -736,9 +740,10 @@
     <div class="modal-handle"></div>
     <div class="modal-title">¿Eliminar?</div>
     <p style="font-size:13px;color:var(--muted);margin-bottom:20px" id="confirm-msg">Esta acción no se puede deshacer.</p>
+    <button class="btn-danger" id="confirm-following-btn" onclick="confirmDelete(true)" style="display:none;width:100%;margin-bottom:10px">Eliminar este y los siguientes</button>
     <div class="modal-btns">
       <button class="btn-s" onclick="closeModal('confirm-modal')">Cancelar</button>
-      <button class="btn-danger" onclick="confirmDelete()" style="flex:1">Eliminar</button>
+      <button class="btn-danger" id="confirm-delete-btn" onclick="confirmDelete()" style="flex:1">Eliminar</button>
     </div>
   </div>
 </div>

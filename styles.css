@@ -411,8 +411,7 @@ input[type=date]{color-scheme:light}
 .add-btn.income{background:var(--income)}.add-btn.income:hover{background:#236644}
 .add-btn.expense{background:var(--expense)}.add-btn.expense:hover{background:#952020}
 
-.propagate-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-.propagate-row p{font-size:12px;color:var(--muted);flex:1}
+.repeat-hint{font-size:12px;color:var(--muted);margin-top:6px}
 .propagate-edit-row{border-top:1px solid var(--border-l);padding-top:14px;margin-top:4px;margin-bottom:4px}
 
 /* AMOUNT INPUT */
