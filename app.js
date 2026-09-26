@@ -2702,7 +2702,16 @@ function exportPDF(type) {
   const total = items.reduce((s, x) => s + x.amount, 0);
   const totalRow = headers.map((h, i) => i === 0 ? 'Total' : i === 1 ? fmtEur(total) : '');
 
+  // En modo "app" (añadida a pantalla de inicio), iOS bloquea window.print() sin avisar:
+  // se queda mostrando la tabla sin abrir nada. Avisamos y no llegamos a intentarlo.
+  const standalone = window.navigator.standalone === true
+    || window.matchMedia('(display-mode: standalone)').matches;
+
   document.getElementById('print-area').innerHTML = `
+    <div class="print-close-bar">
+      ${standalone ? '<p>Para exportar a PDF, abre Cuentas Claras en el navegador (no desde el icono de inicio).</p>' : ''}
+      <button id="print-close-btn" onclick="closePrintPreview()">✕ Cerrar</button>
+    </div>
     <h1>${esc(isGastos ? 'Gastos' : 'Ingresos')} — ${esc(monthName)} ${state.year}</h1>
     <table>
       <thead><tr>${headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
@@ -2710,12 +2719,15 @@ function exportPDF(type) {
       <tfoot><tr>${totalRow.map(c => `<td>${esc(c)}</td>`).join('')}</tr></tfoot>
     </table>`;
   document.body.classList.add('printing');
-  window.print();
-  // 'afterprint' salta al cerrar el diálogo (se imprima o se cancele). El timeout es
-  // solo una red de seguridad por si algún navegador no llegara a dispararlo.
-  const stopPrinting = () => document.body.classList.remove('printing');
-  window.addEventListener('afterprint', stopPrinting, { once: true });
-  setTimeout(stopPrinting, 60_000);
+  if (!standalone) window.print();
+  // 'afterprint' salta al cerrar el diálogo (se imprima o se cancele). El botón "Cerrar"
+  // y el timeout son la red de seguridad si el navegador no llega a abrirlo o a dispararlo.
+  window.addEventListener('afterprint', closePrintPreview, { once: true });
+  setTimeout(closePrintPreview, 60_000);
+}
+
+function closePrintPreview() {
+  document.body.classList.remove('printing');
 }
 
 /* ═══════════════════════════════════════════════════════════

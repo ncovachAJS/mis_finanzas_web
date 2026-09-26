@@ -463,7 +463,11 @@ input[type=date]{color-scheme:light}
 #print-area{display:none}
 body.printing>*:not(#print-area){display:none!important}
 body.printing{background:#fff!important}
-body.printing #print-area{display:block;background:#fff;color:#111}
+body.printing #print-area{display:block;background:#fff;color:#111;padding:16px;min-height:100vh;box-sizing:border-box}
+.print-close-bar{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-bottom:16px}
+.print-close-bar p{flex:1;margin:0;font-size:12px;color:var(--danger,#b83030)}
+#print-close-btn{background:var(--surface-2,#e8e5de);border:none;border-radius:8px;padding:8px 16px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#111;cursor:pointer}
+@media print{.print-close-bar{display:none}}
 #print-area h1{font-family:'DM Serif Display',serif;font-size:20px;font-weight:400;margin-bottom:16px;color:#111}
 #print-area table{width:100%;border-collapse:collapse;font-size:12px;color:#111}
 #print-area th,#print-area td{border:1px solid #ccc;padding:6px 8px;text-align:left}
