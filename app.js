@@ -175,6 +175,15 @@ function _enableSwipeToClose(modalEl) {
   box.addEventListener('touchcancel', end, { passive: true });
 }
 
+/** ¿Hay ya algo con el mismo nombre, importe y cuenta? Para avisar de un posible duplicado al crear. */
+function isLikelyDuplicate(list, name, amount, accountId) {
+  return list.some(x =>
+    x.name.trim().toLowerCase() === name.trim().toLowerCase() &&
+    Math.abs(x.amount - amount) < 0.005 &&
+    String(x.accountId ?? '') === String(accountId ?? '')
+  );
+}
+
 function esc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -489,6 +498,8 @@ function renderDashboard(data) {
   const available = data.available     ?? 0;
   const pos = available >= 0;
   const hasPending = pendingI > 0 || pendingE > 0;
+  // Con todo lo pendiente cobrado/pagado tal como está previsto
+  const projected = (data.totalIncomes ?? 0) - (data.totalExpenses ?? 0);
 
   const budgetAlert = data.budgetAlert ? renderBudgetAlert(data) : '';
   const accountBreakdown = renderAccountBreakdown(data.accountBreakdown);
@@ -499,6 +510,7 @@ function renderDashboard(data) {
       <div class="balance-hero-label">Ahorro del mes — ${MONTHS[state.month-1]} ${state.year}</div>
       <div class="balance-hero-amount">${pos ? '+' : ''}${fmtEur(available)}</div>
       <div class="balance-hero-sub">${pos ? '¡Vas bien! Ingresos superan a gastos.' : 'Los gastos superan los ingresos este mes.'}</div>
+      ${hasPending ? `<div class="balance-hero-projection">Previsto a fin de mes: ${projected >= 0 ? '+' : ''}${fmtEur(projected)}</div>` : ''}
     </div>
     ${renderNetWorth()}
     ${hasPending ? `<div class="pending-banner">⚠️ Tienes items pendientes:
@@ -1096,6 +1108,7 @@ function renderExpenseCard(e) {
               ${e.isPaid ? '↩ Pendiente' : '✓ Pagado'}
             </button>
             <button class="act-btn" onclick="openExpenseModal('${e.id}')">✏️ Editar</button>
+            <button class="act-btn" onclick="duplicateExpense('${e.id}')" title="Duplicar">📋</button>
             <button class="act-btn del" onclick="askDeleteExpense('${e.id}')">🗑</button>
           </div>
         </div>
@@ -1181,6 +1194,7 @@ function renderIngresos() {
               ${i.isPaid ? '↩ Pendiente' : '✓ Cobrado'}
             </button>
             <button class="act-btn" onclick="openIncomeModal('${i.id}')">✏️ Editar</button>
+            <button class="act-btn" onclick="duplicateIncome('${i.id}')" title="Duplicar">📋</button>
             <button class="act-btn del" onclick="askDeleteIncome('${i.id}')">🗑</button>
           </div>
         </div>
@@ -2323,6 +2337,23 @@ function openExpenseModal(id) {
   openModal('expense-modal');
 }
 
+/** Abre el modal como "nuevo gasto" pero con los datos de uno existente, para uno parecido con otro importe. */
+function duplicateExpense(id) {
+  const exp = state.expenses.find(e => e.id === id);
+  if (!exp) return;
+  openExpenseModal();
+  document.getElementById('e-name').value     = exp.name;
+  document.getElementById('e-amount').value   = exp.amount;
+  document.getElementById('e-notes').value    = exp.notes ?? '';
+  document.getElementById('e-account').value  = exp.accountId;
+  document.getElementById('e-category').value = exp.categoryId ?? '';
+  document.getElementById('e-type').value     = exp.expenseType ?? '';
+  onExpenseTypeChange();
+  document.getElementById('expense-modal-title').textContent = 'Duplicar gasto';
+  document.getElementById('e-amount').focus();
+  document.getElementById('e-amount').select();
+}
+
 function onExpenseTypeChange() {
   const type = document.getElementById('e-type').value;
   document.getElementById('e-cuota-row').style.display = type === 'DEBT' ? '' : 'none';
@@ -2341,6 +2372,14 @@ async function saveExpense() {
   if (!accountId) { document.getElementById('e-account-err').classList.add('on'); valid = false; }
   else            document.getElementById('e-account-err').classList.remove('on');
   if (!valid) return;
+
+  if (!state.editingExpenseId
+      && parseInt(document.getElementById('e-month').value) === state.month
+      && parseInt(document.getElementById('e-year').value) === state.year
+      && isLikelyDuplicate(state.expenses, name, amount, accountId)
+      && !confirm(`Ya tienes un gasto "${name}" de ${fmtEur(amount)} en esa cuenta este mes. ¿Añadirlo de todas formas?`)) {
+    return;
+  }
 
   const expType     = document.getElementById('e-type').value || undefined;
   const categoryId  = document.getElementById('e-category').value || undefined;
@@ -2428,6 +2467,20 @@ function openIncomeModal(id) {
   openModal('income-modal');
 }
 
+/** Abre el modal como "nuevo ingreso" pero con los datos de uno existente, para uno parecido con otro importe. */
+function duplicateIncome(id) {
+  const inc = state.incomes.find(i => i.id === id);
+  if (!inc) return;
+  openIncomeModal();
+  document.getElementById('i-name').value    = inc.name;
+  document.getElementById('i-amount').value  = inc.amount;
+  document.getElementById('i-notes').value   = inc.notes ?? '';
+  document.getElementById('i-account').value = inc.accountId ?? '';
+  document.getElementById('income-modal-title').textContent = 'Duplicar ingreso';
+  document.getElementById('i-amount').focus();
+  document.getElementById('i-amount').select();
+}
+
 async function saveIncome() {
   let valid = true;
   const name   = document.getElementById('i-name').value.trim();
@@ -2440,6 +2493,14 @@ async function saveIncome() {
 
   const isNew = !state.editingIncomeId;
   const accountId = document.getElementById('i-account').value || null;
+
+  if (isNew
+      && parseInt(document.getElementById('i-month').value) === state.month
+      && parseInt(document.getElementById('i-year').value) === state.year
+      && isLikelyDuplicate(state.incomes, name, amount, accountId)
+      && !confirm(`Ya tienes un ingreso "${name}" de ${fmtEur(amount)} en esa cuenta este mes. ¿Añadirlo de todas formas?`)) {
+    return;
+  }
   const payload = {
     name, amount,
     ...(isNew && {
