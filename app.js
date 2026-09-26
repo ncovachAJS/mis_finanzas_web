@@ -62,6 +62,7 @@ const state = {
   contributionInvestmentId: null,
   detailInvestmentId:       null,
   pendingDeleteFn:   null,
+  pendingRecoveryCode: null,
   pendingDeleteFollowingFn: null,
 };
 
@@ -98,7 +99,10 @@ async function api(method, path, body) {
   if (state.token) opts.headers['Authorization'] = 'Bearer ' + state.token;
   if (body !== undefined) opts.body = JSON.stringify(body);
   const res = await fetch(BASE + path, opts);
-  if (res.status === 401) { doLogout(); return null; }
+  // Sesión caducada: cerramos sesión sola solo en lecturas (GET). Un 401 en una acción
+  // (login, cambiar contraseña, restablecerla…) es "credenciales incorrectas" y lo debe
+  // mostrar quien la llamó, no cerrar la sesión sin explicación.
+  if (res.status === 401 && method === 'GET' && state.token) { doLogout(); return null; }
   const text = await res.text();
   if (!text) return null;
   const data = JSON.parse(text);
@@ -202,6 +206,80 @@ function showAuthTab(which) {
   document.getElementById('auth-' + which).classList.add('on');
 }
 
+function openForgotPassword() {
+  document.getElementById('forgot-email').value = document.getElementById('login-email').value.trim();
+  document.getElementById('forgot-code').value = '';
+  document.getElementById('forgot-new-pass').value = '';
+  document.getElementById('forgot-err').classList.remove('on');
+  openModal('forgot-modal');
+}
+
+async function doResetPassword() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const recoveryCode = document.getElementById('forgot-code').value.trim();
+  const newPassword = document.getElementById('forgot-new-pass').value;
+  const errEl = document.getElementById('forgot-err');
+  errEl.classList.remove('on');
+  if (!email || !recoveryCode || !newPassword) { errEl.textContent = 'Rellena todos los campos'; errEl.classList.add('on'); return; }
+  if (newPassword.length < 6) { errEl.textContent = 'La contraseña debe tener al menos 6 caracteres'; errEl.classList.add('on'); return; }
+  const btn = document.getElementById('forgot-btn');
+  btn.disabled = true; btn.textContent = 'Restableciendo…';
+  try {
+    const data = await api('POST', '/auth/reset-password', { email, recoveryCode, newPassword });
+    if (!data) return;
+    clearUserCache();
+    resetUserState();
+    state.token = data.token;
+    state.user  = data.user;
+    localStorage.setItem('finanzas_token', state.token);
+    localStorage.setItem('finanzas_user', JSON.stringify(state.user));
+    closeModal('forgot-modal');
+    startApp();
+    openRecoveryCodeModal(data.recoveryCode, 'Nuevo código de recuperación');
+    showToast('Contraseña actualizada', 'success');
+  } catch(e) {
+    errEl.textContent = e.message || 'Email o código incorrectos';
+    errEl.classList.add('on');
+  } finally { btn.disabled = false; btn.textContent = 'Restablecer'; }
+}
+
+/** Muestra el código de recuperación una única vez, con opción de copiarlo. */
+function openRecoveryCodeModal(code, title) {
+  state.pendingRecoveryCode = code;
+  document.getElementById('recovery-code-title').textContent = title || 'Tu código de recuperación';
+  document.getElementById('recovery-code-value').textContent = code;
+  openModal('recovery-code-modal');
+}
+function closeRecoveryCodeModal() {
+  state.pendingRecoveryCode = null;
+  closeModal('recovery-code-modal');
+}
+async function copyRecoveryCode() {
+  const btn = document.getElementById('recovery-copy-btn');
+  try {
+    await navigator.clipboard.writeText(state.pendingRecoveryCode || '');
+    btn.textContent = '✓ Copiado';
+    setTimeout(() => { btn.textContent = '📋 Copiar'; }, 1500);
+  } catch(e) { showToast('No se pudo copiar, selecciónalo a mano', 'error'); }
+}
+
+async function regenerateRecoveryCode() {
+  const currentPassword = document.getElementById('p-recovery-pass').value;
+  const errEl = document.getElementById('p-recovery-err');
+  errEl.classList.remove('on');
+  if (!currentPassword) { errEl.textContent = 'Introduce tu contraseña actual'; errEl.classList.add('on'); return; }
+  const btn = document.getElementById('p-recovery-btn');
+  btn.disabled = true; btn.textContent = 'Generando…';
+  try {
+    const data = await api('POST', '/auth/recovery-code/regenerate', { currentPassword });
+    document.getElementById('p-recovery-pass').value = '';
+    openRecoveryCodeModal(data.recoveryCode, 'Nuevo código de recuperación');
+  } catch(e) {
+    errEl.textContent = e.message || 'Contraseña actual incorrecta';
+    errEl.classList.add('on');
+  } finally { btn.disabled = false; btn.textContent = 'Generar nuevo código'; }
+}
+
 async function doLogin() {
   const email    = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
@@ -246,6 +324,7 @@ async function doRegister() {
     localStorage.setItem('finanzas_token', state.token);
     localStorage.setItem('finanzas_user', JSON.stringify(state.user));
     startApp();
+    if (data.recoveryCode) openRecoveryCodeModal(data.recoveryCode, 'Tu código de recuperación');
   } catch(e) {
     errEl.textContent = e.message || 'Error al registrarse';
     errEl.classList.add('on');
@@ -1228,11 +1307,12 @@ async function saveCategory() {
   const icon  = document.getElementById('cat-icon').value.trim() || undefined;
   const color = document.getElementById('cat-color').value.trim() || undefined;
   const budgetVal = parseFloat(document.getElementById('cat-budget').value);
-  const budget = isNaN(budgetVal) || budgetVal <= 0 ? undefined : budgetVal;
+  // null borra el presupuesto explícitamente; omitirlo (undefined) lo dejaría igual al editar
+  const budget = isNaN(budgetVal) || budgetVal <= 0 ? null : budgetVal;
   if (!name) { document.getElementById('cat-name-err').classList.add('on'); return; }
   document.getElementById('cat-name-err').classList.remove('on');
   const quickAdd = document.getElementById('cat-quickadd-toggle').classList.contains('on');
-  const payload = { name, icon, color, quickAdd, ...(budget !== undefined ? { budget } : {}) };
+  const payload = { name, icon, color, quickAdd, budget };
   const btn = document.getElementById('cat-save-btn');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
@@ -1862,6 +1942,8 @@ function openProfileModal() {
   document.getElementById('p-cur-pass').value = '';
   document.getElementById('p-new-pass').value = '';
   document.getElementById('p-pass-err').classList.remove('on');
+  document.getElementById('p-recovery-pass').value = '';
+  document.getElementById('p-recovery-err').classList.remove('on');
   updateThemeSelector();
   updateAvatarUI(state.user?.avatar || null);
   showProfileTab('cuenta');
@@ -2326,7 +2408,8 @@ async function saveAccount() {
   const budget = parseFloat(document.getElementById('a-budget').value);
   if (!name) { document.getElementById('a-name-err').classList.add('on'); return; }
   document.getElementById('a-name-err').classList.remove('on');
-  const payload = { name, budget: isNaN(budget) || budget <= 0 ? undefined : budget };
+  // null borra el presupuesto explícitamente; omitirlo (undefined) lo dejaría igual al editar
+  const payload = { name, budget: isNaN(budget) || budget <= 0 ? null : budget };
   const btn = document.getElementById('a-save-btn');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {

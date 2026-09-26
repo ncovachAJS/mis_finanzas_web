@@ -54,6 +54,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;font-size:16px;line-height:1.6;b
 .auth-form{display:none}.auth-form.on{display:block}
 .auth-err{font-size:13px;color:var(--danger);background:var(--expense-l);border:1px solid var(--danger);border-radius:var(--r);padding:10px 14px;margin-bottom:16px;display:none}
 .auth-err.on{display:block}
+.auth-link{display:block;width:100%;background:none;border:none;color:var(--primary);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;text-align:center;padding:14px 0 0;cursor:pointer}
+.recovery-code{font-family:'DM Serif Display',serif;font-size:22px;letter-spacing:.03em;text-align:center;background:var(--surface-2);border-radius:var(--r);padding:18px 12px;margin-bottom:18px;word-break:break-all;user-select:all}
 
 /* HEADER */
 .hdr{background:linear-gradient(135deg,var(--hero-a) 0%,var(--hero-b) 100%);color:#fff;padding:20px 20px 18px;padding-top:calc(28px + env(safe-area-inset-top,0px));position:fixed;top:0;left:0;right:0;z-index:100;border-bottom:1px solid rgba(255,255,255,.07)}
