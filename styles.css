@@ -269,6 +269,25 @@ input[type=date]{color-scheme:light}
 .goal-bar-fill{height:100%;background:var(--primary);border-radius:4px;transition:width .4s}
 .goal-bar-fill.done{background:var(--success)}
 .goal-actions{display:flex;gap:6px;justify-content:flex-end}
+/* INVERSIONES */
+.inv-card{background:var(--surface);border-radius:14px;padding:16px 18px;margin-bottom:10px;box-shadow:0 1px 6px rgba(0,0,0,.06),0 4px 20px rgba(0,0,0,.05);cursor:pointer;transition:box-shadow .2s}
+.inv-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.1)}
+.inv-top{display:flex;align-items:center;gap:12px}
+.inv-title{flex:1;min-width:0}
+.inv-value{text-align:right}
+.inv-amount{font-family:'DM Serif Display',serif;font-size:22px;line-height:1.1;color:var(--text);font-variant-numeric:tabular-nums}
+.inv-profit{font-size:12px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.inv-profit.pos{color:var(--income)}.inv-profit.neg{color:var(--expense)}
+.inv-meta{font-size:12px;color:var(--faint);margin-top:8px}
+.inv-list-title{font-size:13px;font-weight:600;color:var(--muted);margin:14px 0 8px;letter-spacing:.02em}
+.inv-empty{font-size:13px;color:var(--faint);margin-bottom:8px}
+.inv-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border-l);font-size:13px}
+.inv-row:last-child{border-bottom:none}
+.inv-row-date{color:var(--muted);min-width:82px}
+.inv-row-amt{font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
+.inv-row-diff{flex:1;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.inv-row-del{background:none;border:none;color:var(--faint);cursor:pointer;font-size:13px;padding:2px 4px}
+.inv-row-del:hover{color:var(--danger)}
 .goal-deadline{font-size:11px;color:var(--faint);margin-top:4px}
 
 /* CATEGORY CARD */

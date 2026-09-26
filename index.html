@@ -270,6 +270,14 @@
   <div id="cuentas-content">
     <div class="ldg"><span class="ldg-dot"></span><span class="ldg-dot"></span><span class="ldg-dot"></span></div>
   </div>
+
+  <div class="section-hdr" style="margin-top:24px">
+    <h2>Inversiones</h2>
+    <button class="add-btn" onclick="openInvestmentModal()">＋ Añadir</button>
+  </div>
+  <div id="inversiones-content">
+    <div class="ldg"><span class="ldg-dot"></span><span class="ldg-dot"></span><span class="ldg-dot"></span></div>
+  </div>
 </div>
 
 </main>
@@ -626,6 +634,99 @@
         <div class="ldg"><span class="ldg-dot"></span><span class="ldg-dot"></span><span class="ldg-dot"></span></div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Modal Inversión (crear / editar) -->
+<div class="modal" id="investment-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="investment-modal-title">Nueva inversión</div>
+    <div class="fld">
+      <label>Nombre <span class="req">*</span></label>
+      <input type="text" id="inv-name" placeholder="Ej: Plan de pensiones, Fondo indexado…" maxlength="100">
+      <div class="err-msg" id="inv-name-err">Escribe un nombre</div>
+    </div>
+    <div class="fld">
+      <label>Emoji</label>
+      <input type="text" id="inv-emoji" placeholder="📈" maxlength="4" style="max-width:80px">
+    </div>
+    <div class="fld" id="inv-value-fld">
+      <label>Valor actual</label>
+      <div class="amount-row"><span class="currency-prefix">€</span><input type="number" id="inv-value" placeholder="Lo que marca hoy tu banco" min="0" step="0.01"></div>
+    </div>
+    <div class="fld">
+      <label>Aportado hasta ahora</label>
+      <div class="amount-row"><span class="currency-prefix">€</span><input type="number" id="inv-base" placeholder="0.00" min="0" step="0.01"></div>
+      <div style="font-size:11px;color:var(--faint);margin-top:4px">Total que has metido antes de registrarla aquí. Sirve para calcular la rentabilidad.</div>
+    </div>
+    <div class="fld">
+      <label>Límite de aportación anual (opcional)</label>
+      <div class="amount-row"><span class="currency-prefix">€</span><input type="number" id="inv-limit" placeholder="Ej: 1500 en planes de pensiones" min="0" step="0.01"></div>
+    </div>
+    <div class="fld">
+      <label>ISIN (opcional)</label>
+      <input type="text" id="inv-isin" placeholder="Ej: ES0000000000" maxlength="12" style="text-transform:uppercase">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-s" onclick="closeModal('investment-modal')">Cancelar</button>
+      <button class="btn-p" onclick="saveInvestment()" id="inv-save-btn">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Actualizar valor de inversión -->
+<div class="modal" id="valuation-modal">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="valuation-modal-title">Actualizar valor</div>
+    <div class="fld">
+      <label>Valor <span class="req">*</span></label>
+      <div class="amount-row"><span class="currency-prefix">€</span><input type="number" id="val-value" placeholder="0.00" min="0" step="0.01"></div>
+      <div class="err-msg" id="val-value-err">Introduce un importe válido</div>
+    </div>
+    <div class="fld">
+      <label>Fecha</label>
+      <input type="date" id="val-date">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-s" onclick="closeModal('valuation-modal')">Cancelar</button>
+      <button class="btn-p" onclick="saveValuation()" id="val-save-btn">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Aportación a inversión -->
+<div class="modal" id="contribution-modal">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="contribution-modal-title">Nueva aportación</div>
+    <div class="fld">
+      <label>Cantidad <span class="req">*</span></label>
+      <div class="amount-row"><span class="currency-prefix">€</span><input type="number" id="con-amount" placeholder="0.00" min="0.01" step="0.01"></div>
+      <div class="err-msg" id="con-amount-err">Introduce un importe válido</div>
+    </div>
+    <div class="fld">
+      <label>Fecha</label>
+      <input type="date" id="con-date">
+    </div>
+    <div class="fld">
+      <label>Nota (opcional)</label>
+      <input type="text" id="con-notes" placeholder="Ej: Aportación mensual" maxlength="200">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-s" onclick="closeModal('contribution-modal')">Cancelar</button>
+      <button class="btn-p" onclick="saveContribution()" id="con-save-btn">Añadir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Detalle de inversión -->
+<div class="modal" id="investment-detail-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="inv-detail-title">Inversión</div>
+    <div id="inv-detail-content"></div>
   </div>
 </div>
 

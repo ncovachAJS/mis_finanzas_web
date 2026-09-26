@@ -46,6 +46,7 @@ const state = {
   incomes:   [],
   categories: [],
   savingsGoals: [],
+  investments:  [],
   historyItems: [],
   historyTotal: 0,
   gastosFilter:   'all',
@@ -56,6 +57,10 @@ const state = {
   editingGoalId:     null,
   editingCategoryId: null,
   addSavingsGoalId:  null,
+  editingInvestmentId:      null,
+  valuationInvestmentId:    null,
+  contributionInvestmentId: null,
+  detailInvestmentId:       null,
   pendingDeleteFn:   null,
 };
 
@@ -253,6 +258,7 @@ function resetUserState() {
   state.incomes       = [];
   state.categories    = [];
   state.savingsGoals  = [];
+  state.investments   = [];
   state.historyItems  = [];
   state.historyTotal  = 0;
   state.gastosFilter   = 'all';
@@ -305,7 +311,7 @@ async function startApp() {
   populateMonthSelects();
 
   // Fire all in parallel — backend cold-start hits once, not 5 times
-  Promise.all([loadAccounts(), loadCategories(), loadDashboard(), loadGastos(), loadIngresos()]);
+  Promise.all([loadAccounts(), loadCategories(), loadDashboard(), loadGastos(), loadIngresos(), loadInvestments()]);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1394,6 +1400,331 @@ function askDeleteGoal(id) {
     await api('DELETE', `/savings-goals/${id}`);
     showToast('Objetivo eliminado');
     await loadSavingsGoals();
+  };
+  openModal('confirm-modal');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INVERSIONES (plan de pensiones, fondos…) — valor actualizado a mano
+════════════════════════════════════════════════════════════════ */
+const fmtPct = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1, signDisplay: 'always' });
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function fmtDay(iso) {
+  return iso ? new Date(iso.slice(0, 10) + 'T12:00:00').toLocaleDateString('es-ES') : '';
+}
+function signedEur(n) { return (n > 0 ? '+' : '') + fmtEur(n); }
+function signClass(n) { return n > 0 ? 'pos' : n < 0 ? 'neg' : ''; }
+
+async function loadInvestments() {
+  const el = document.getElementById('inversiones-content');
+  if (el && !state.investments.length) el.innerHTML = ldg();
+  try {
+    const data = await api('GET', '/investments');
+    if (data === null) return;
+    state.investments = data ?? [];
+    renderInvestments();
+  } catch(e) {
+    if (el) el.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><h3>Error</h3><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+function renderInvestments() {
+  const el = document.getElementById('inversiones-content');
+  if (!el) return;
+  const list = state.investments;
+  if (!list.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-ico">📈</div><h3>Sin inversiones</h3><p>Añade tu plan de pensiones o un fondo y actualiza su valor cuando quieras.</p></div>`;
+    return;
+  }
+
+  const valued = list.filter(i => i.currentValue !== null);
+  const totalValue = valued.reduce((s, i) => s + i.currentValue, 0);
+  const totalProfit = valued.reduce((s, i) => s + i.profit, 0);
+  const totals = list.length > 1 && valued.length ? `
+    <div class="stats" style="grid-template-columns:repeat(2,1fr)">
+      <div class="scard"><div class="snum c-primary">${fmtEur(totalValue)}</div><div class="slbls">Valor total</div></div>
+      <div class="scard"><div class="snum ${totalProfit >= 0 ? 'c-income' : 'c-expense'}">${signedEur(totalProfit)}</div><div class="slbls">Rentabilidad total</div></div>
+    </div>` : '';
+
+  el.innerHTML = totals + list.map(i => {
+    const hasValue = i.currentValue !== null;
+    const diff = hasValue && i.previousValue !== null ? i.currentValue - i.previousValue : null;
+    const limitPct = i.annualLimit ? Math.min(Math.round(i.contributedThisYear / i.annualLimit * 100), 100) : 0;
+    return `
+      <div class="inv-card" onclick="openInvestmentDetail('${i.id}')">
+        <div class="inv-top">
+          <span class="goal-emoji">${esc(i.emoji || '📈')}</span>
+          <div class="inv-title">
+            <div class="account-name">${esc(i.name)}</div>
+            <div class="account-budget">Aportado: ${fmtEur(i.totalContributed)}</div>
+          </div>
+          <div class="inv-value">
+            <div class="inv-amount">${hasValue ? fmtEur(i.currentValue) : '—'}</div>
+            ${i.profit !== null ? `<div class="inv-profit ${signClass(i.profit)}">${signedEur(i.profit)}${i.profitPct !== null ? ` (${fmtPct.format(i.profitPct)} %)` : ''}</div>` : ''}
+          </div>
+        </div>
+        <div class="inv-meta">
+          ${hasValue
+            ? `Actualizado el ${fmtDay(i.lastValuationDate)}${diff !== null ? ` · <span class="inv-profit ${signClass(diff)}">${signedEur(diff)}</span> desde el anterior` : ''}`
+            : 'Sin valor registrado todavía'}
+        </div>
+        ${i.annualLimit ? `
+          <div class="goal-amounts" style="margin-top:10px"><span>Aportado en ${new Date().getFullYear()}: ${fmtEur(i.contributedThisYear)}</span><span>Límite: ${fmtEur(i.annualLimit)}</span></div>
+          <div class="goal-bar-wrap"><div class="goal-bar-fill ${limitPct >= 100 ? 'done' : ''}" style="width:${limitPct}%"></div></div>` : ''}
+        <div class="goal-actions" style="margin-top:10px">
+          <button class="btn-s" style="padding:4px 10px;font-size:12px" onclick="event.stopPropagation();openValuationModal('${i.id}')">Actualizar valor</button>
+          <button class="btn-s" style="padding:4px 10px;font-size:12px" onclick="event.stopPropagation();openContributionModal('${i.id}')">+ Aportación</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function openInvestmentModal(id) {
+  state.editingInvestmentId = id ?? null;
+  const isEdit = !!id;
+  document.getElementById('investment-modal-title').textContent = isEdit ? 'Editar inversión' : 'Nueva inversión';
+  ['inv-name','inv-emoji','inv-value','inv-base','inv-limit','inv-isin'].forEach(f => document.getElementById(f).value = '');
+  document.getElementById('inv-name-err').classList.remove('on');
+  // El valor se cambia con "Actualizar valor" para que quede en el historial
+  document.getElementById('inv-value-fld').style.display = isEdit ? 'none' : '';
+  if (isEdit) {
+    const i = state.investments.find(x => x.id === id);
+    if (i) {
+      document.getElementById('inv-name').value  = i.name;
+      document.getElementById('inv-emoji').value = i.emoji || '';
+      document.getElementById('inv-base').value  = i.baseContributed || '';
+      document.getElementById('inv-limit').value = i.annualLimit ?? '';
+      document.getElementById('inv-isin').value  = i.isin ?? '';
+    }
+  }
+  openModal('investment-modal');
+}
+
+async function saveInvestment() {
+  const name = document.getElementById('inv-name').value.trim();
+  if (!name) { document.getElementById('inv-name-err').classList.add('on'); return; }
+  document.getElementById('inv-name-err').classList.remove('on');
+  const num = f => { const v = parseFloat(document.getElementById(f).value); return isNaN(v) || v < 0 ? null : v; };
+  const isEdit = !!state.editingInvestmentId;
+  const isin = document.getElementById('inv-isin').value.trim().toUpperCase();
+  const payload = {
+    name,
+    emoji: document.getElementById('inv-emoji').value.trim() || '📈',
+    baseContributed: num('inv-base') ?? 0,
+    ...(isEdit
+      ? { annualLimit: num('inv-limit'), isin: isin || null }
+      : {
+          ...(num('inv-limit') !== null && { annualLimit: num('inv-limit') }),
+          ...(isin && { isin }),
+          ...(num('inv-value') !== null && { initialValue: num('inv-value') }),
+        }),
+  };
+  const btn = document.getElementById('inv-save-btn');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    if (isEdit) {
+      await api('PATCH', `/investments/${state.editingInvestmentId}`, payload);
+      showToast('Inversión actualizada', 'success');
+    } else {
+      await api('POST', '/investments', payload);
+      showToast('Inversión añadida', 'success');
+    }
+    closeModal('investment-modal');
+    await refreshInvestments(state.editingInvestmentId);
+  } catch(e) {
+    showToast(e.message || 'Error al guardar', 'error');
+  } finally { btn.disabled = false; btn.textContent = 'Guardar'; }
+}
+
+function openValuationModal(id) {
+  state.valuationInvestmentId = id;
+  const i = state.investments.find(x => x.id === id);
+  document.getElementById('valuation-modal-title').textContent = `Actualizar: ${i?.name ?? ''}`;
+  document.getElementById('val-value').value = i?.currentValue ?? '';
+  document.getElementById('val-date').value  = todayStr();
+  document.getElementById('val-value-err').classList.remove('on');
+  openModal('valuation-modal');
+  setTimeout(() => document.getElementById('val-value').select(), 50);
+}
+
+async function saveValuation() {
+  const value = parseFloat(document.getElementById('val-value').value);
+  if (isNaN(value) || value < 0) { document.getElementById('val-value-err').classList.add('on'); return; }
+  document.getElementById('val-value-err').classList.remove('on');
+  const date = document.getElementById('val-date').value || todayStr();
+  const btn = document.getElementById('val-save-btn');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    await api('POST', `/investments/${state.valuationInvestmentId}/valuations`, { value, date });
+    showToast('Valor actualizado', 'success');
+    closeModal('valuation-modal');
+    await refreshInvestments(state.valuationInvestmentId);
+  } catch(e) {
+    showToast(e.message || 'Error al guardar', 'error');
+  } finally { btn.disabled = false; btn.textContent = 'Guardar'; }
+}
+
+function openContributionModal(id) {
+  state.contributionInvestmentId = id;
+  const i = state.investments.find(x => x.id === id);
+  document.getElementById('contribution-modal-title').textContent = `Aportación: ${i?.name ?? ''}`;
+  document.getElementById('con-amount').value = '';
+  document.getElementById('con-notes').value  = '';
+  document.getElementById('con-date').value   = todayStr();
+  document.getElementById('con-amount-err').classList.remove('on');
+  openModal('contribution-modal');
+}
+
+async function saveContribution() {
+  const amount = parseFloat(document.getElementById('con-amount').value);
+  if (isNaN(amount) || amount <= 0) { document.getElementById('con-amount-err').classList.add('on'); return; }
+  document.getElementById('con-amount-err').classList.remove('on');
+  const date  = document.getElementById('con-date').value || todayStr();
+  const notes = document.getElementById('con-notes').value.trim() || undefined;
+  const btn = document.getElementById('con-save-btn');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    await api('POST', `/investments/${state.contributionInvestmentId}/contributions`, { amount, date, notes });
+    showToast('Aportación añadida', 'success');
+    closeModal('contribution-modal');
+    await refreshInvestments(state.contributionInvestmentId);
+  } catch(e) {
+    showToast(e.message || 'Error al guardar', 'error');
+  } finally { btn.disabled = false; btn.textContent = 'Añadir'; }
+}
+
+/** Recarga la lista y, si el detalle de esa inversión está abierto, también el detalle. */
+async function refreshInvestments(id) {
+  const detailOpen = document.getElementById('investment-detail-modal').classList.contains('on');
+  await Promise.all([
+    loadInvestments(),
+    detailOpen && id && id === state.detailInvestmentId ? openInvestmentDetail(id, true) : null,
+  ]);
+}
+
+let _invChart = null;
+
+async function openInvestmentDetail(id, refreshOnly = false) {
+  state.detailInvestmentId = id;
+  const el = document.getElementById('inv-detail-content');
+  if (!refreshOnly) {
+    const i = state.investments.find(x => x.id === id);
+    document.getElementById('inv-detail-title').textContent = `${i?.emoji || '📈'} ${i?.name ?? 'Inversión'}`;
+    el.innerHTML = ldg();
+    openModal('investment-detail-modal');
+  }
+  try {
+    const inv = await api('GET', `/investments/${id}`);
+    if (!inv) return;
+    renderInvestmentDetail(inv);
+  } catch(e) {
+    el.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><h3>Error</h3><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+function renderInvestmentDetail(inv) {
+  document.getElementById('inv-detail-title').textContent = `${inv.emoji || '📈'} ${inv.name}`;
+  const el = document.getElementById('inv-detail-content');
+  const vals = inv.valuations;
+  const recentVals = vals.slice().reverse();
+  el.innerHTML = `
+    <div class="stats" style="grid-template-columns:repeat(3,1fr);gap:8px">
+      <div class="scard" style="padding:12px 8px"><div class="snum c-primary" style="font-size:18px">${inv.currentValue !== null ? fmtEur(inv.currentValue) : '—'}</div><div class="slbls">Valor actual</div></div>
+      <div class="scard" style="padding:12px 8px"><div class="snum" style="font-size:18px">${fmtEur(inv.totalContributed)}</div><div class="slbls">Aportado</div></div>
+      <div class="scard" style="padding:12px 8px"><div class="snum ${inv.profit === null ? '' : inv.profit >= 0 ? 'c-income' : 'c-expense'}" style="font-size:18px">${inv.profit !== null ? signedEur(inv.profit) : '—'}</div><div class="slbls">${inv.profitPct !== null ? fmtPct.format(inv.profitPct) + ' %' : 'Rentabilidad'}</div></div>
+    </div>
+    ${vals.length >= 2 ? `<div class="chart-wrap" style="padding:12px"><canvas id="inv-chart" height="180"></canvas></div>` : ''}
+    <div class="goal-actions" style="justify-content:stretch;margin-bottom:18px">
+      <button class="btn-p" style="flex:1" onclick="openValuationModal('${inv.id}')">Actualizar valor</button>
+      <button class="btn-s" style="flex:1" onclick="openContributionModal('${inv.id}')">+ Aportación</button>
+    </div>
+
+    <div class="inv-list-title">Historial de valores</div>
+    ${recentVals.length ? `<div class="hist-group">${recentVals.map((v, idx) => {
+      const prev = recentVals[idx + 1];
+      const d = prev ? v.value - prev.value : null;
+      return `<div class="inv-row">
+        <span class="inv-row-date">${fmtDay(v.date)}</span>
+        <span class="inv-row-amt">${fmtEur(v.value)}</span>
+        <span class="inv-row-diff inv-profit ${d === null ? '' : signClass(d)}">${d === null ? '' : signedEur(d)}</span>
+        <button class="inv-row-del" onclick="askDeleteValuation('${inv.id}','${v.id}')" title="Eliminar">✕</button>
+      </div>`;
+    }).join('')}</div>` : '<p class="inv-empty">Todavía no has registrado ningún valor.</p>'}
+
+    <div class="inv-list-title">Aportaciones</div>
+    ${inv.baseContributed ? `<p class="inv-empty">Aportado antes de registrarla: ${fmtEur(inv.baseContributed)}</p>` : ''}
+    ${inv.contributions.length ? `<div class="hist-group">${inv.contributions.map(c => `
+      <div class="inv-row">
+        <span class="inv-row-date">${fmtDay(c.date)}</span>
+        <span class="inv-row-amt">${fmtEur(c.amount)}</span>
+        <span class="inv-row-diff" style="color:var(--muted)">${esc(c.notes || '')}</span>
+        <button class="inv-row-del" onclick="askDeleteContribution('${inv.id}','${c.id}')" title="Eliminar">✕</button>
+      </div>`).join('')}</div>` : '<p class="inv-empty">Sin aportaciones registradas.</p>'}
+
+    <div class="modal-btns" style="margin-top:20px">
+      <button class="btn-danger" onclick="askDeleteInvestment('${inv.id}')">🗑 Eliminar</button>
+      <button class="btn-s" onclick="openInvestmentModal('${inv.id}')">✏️ Editar</button>
+      <button class="btn-p" onclick="closeModal('investment-detail-modal')">Cerrar</button>
+    </div>`;
+
+  if (_invChart) { _invChart.destroy(); _invChart = null; }
+  const canvas = document.getElementById('inv-chart');
+  if (!canvas || typeof Chart === 'undefined') return;
+  const css = getComputedStyle(document.documentElement);
+  const color = css.getPropertyValue('--income').trim() || '#2b7d54';
+  const muted = css.getPropertyValue('--muted').trim() || '#5a6868';
+  _invChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: vals.map(v => fmtDay(v.date)),
+      datasets: [{
+        data: vals.map(v => v.value),
+        borderColor: color, backgroundColor: color + '22',
+        fill: true, tension: 0.25, pointRadius: vals.length > 40 ? 0 : 3, borderWidth: 2,
+      }],
+    },
+    options: {
+      animation: { duration: 400 },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${fmtEur(ctx.parsed.y)}` } } },
+      scales: {
+        x: { ticks: { color: muted, maxTicksLimit: 5, maxRotation: 0 }, grid: { display: false } },
+        y: { ticks: { color: muted, maxTicksLimit: 5, callback: v => fmtEur(v).replace(/,00\s/, ' ') }, grid: { color: muted + '22' } },
+      },
+    },
+  });
+}
+
+function askDeleteValuation(invId, valId) {
+  document.getElementById('confirm-msg').textContent = '¿Eliminar este valor del historial?';
+  state.pendingDeleteFn = async () => {
+    await api('DELETE', `/investments/${invId}/valuations/${valId}`);
+    showToast('Valor eliminado');
+    await refreshInvestments(invId);
+  };
+  openModal('confirm-modal');
+}
+
+function askDeleteContribution(invId, conId) {
+  document.getElementById('confirm-msg').textContent = '¿Eliminar esta aportación?';
+  state.pendingDeleteFn = async () => {
+    await api('DELETE', `/investments/${invId}/contributions/${conId}`);
+    showToast('Aportación eliminada');
+    await refreshInvestments(invId);
+  };
+  openModal('confirm-modal');
+}
+
+function askDeleteInvestment(id) {
+  document.getElementById('confirm-msg').textContent = '¿Eliminar esta inversión y todo su historial? Esta acción no se puede deshacer.';
+  state.pendingDeleteFn = async () => {
+    await api('DELETE', `/investments/${id}`);
+    showToast('Inversión eliminada');
+    closeModal('investment-detail-modal');
+    await loadInvestments();
   };
   openModal('confirm-modal');
 }
