@@ -2218,7 +2218,13 @@ function repeatUntilIdx(pfx) {
 }
 
 function updateRepeatField(pfx) {
-  const rec  = document.getElementById(`${pfx}-recurrence`).value;
+  const recSel = document.getElementById(`${pfx}-recurrence`);
+  // Una cuota (1 de N) solo tiene sentido de mes en mes: si se ponen cuotas y no se ha
+  // elegido recurrencia, la damos por mensual para que "Repetir hasta" no quede oculto.
+  if (pfx === 'e' && !state.editingExpenseId && recSel.value === 'NONE' && expenseCuotas()) {
+    recSel.value = 'MONTHLY';
+  }
+  const rec  = recSel.value;
   const step = REC_STEP[rec] || 0;
   document.getElementById(`${pfx}-repeat-fld`).style.display = step ? '' : 'none';
   if (!step) return;
