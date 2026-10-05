@@ -604,7 +604,8 @@ async function loadAnnualDashboard() {
 function renderAnnualDashboard(data) {
   const totalInc = data.yearPaidIncomes  ?? 0;
   const totalExp = data.yearPaidExpenses ?? 0;
-  const savings  = data.accumulatedSavings ?? 0;
+  const priorSavings = data.priorYearsSavings ?? 0;
+  const savings  = priorSavings + (data.accumulatedSavings ?? 0);
   const pos = savings >= 0;
 
   const totalForBar = totalInc + totalExp;
@@ -626,6 +627,7 @@ function renderAnnualDashboard(data) {
         <span>💰 Cobrado: ${fmtEur(totalInc)}</span>
         <span>💸 Pagado: ${fmtEur(totalExp)}</span>
       </div>
+      ${priorSavings !== 0 ? `<div class="annual-hero-sub">Incluye ${signedEur(priorSavings)} de años anteriores</div>` : ''}
     </div>
 
     <div class="stats" style="grid-template-columns:repeat(2,1fr)">
@@ -647,11 +649,11 @@ function renderAnnualDashboard(data) {
       ${donutChart}
     </div>` : ''}
 
-    ${renderMonthlySavings(data.months, state.dashYear)}
+    ${renderMonthlySavings(data.months, state.dashYear, priorSavings)}
   `;
 }
 
-function renderMonthlySavings(months, year) {
+function renderMonthlySavings(months, year, priorSavings = 0) {
   if (!months || !months.length) return '';
   const now = new Date();
   const currentYear  = now.getFullYear();
@@ -695,7 +697,7 @@ function renderMonthlySavings(months, year) {
 
   // Acumulado desde enero hasta ese mes (incluido), con el mismo criterio que la barra:
   // real para los meses ya pasados, proyectado para los que faltan.
-  let running = 0;
+  let running = priorSavings;
   const makeRow = (m, isFuture) => {
     const hasDat = m.totalIncomes > 0 || m.totalExpenses > 0;
     const saving = isFuture ? (hasDat ? futureSaving(m) : avgSaving) : m.savings;
