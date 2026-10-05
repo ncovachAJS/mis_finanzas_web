@@ -403,7 +403,9 @@ input[type=date]{color-scheme:light}
 .sv-bar-fill{height:100%;border-radius:4px;transition:width .4s}
 .sv-bar-fill.pos{background:var(--income)}.sv-bar-fill.neg{background:var(--expense)}
 .sv-bar-fill.proj{opacity:.45;background-image:repeating-linear-gradient(90deg,transparent,transparent 4px,rgba(255,255,255,.3) 4px,rgba(255,255,255,.3) 6px)}
-.sv-amount{font-size:13px;font-weight:600;font-family:'DM Serif Display',serif;width:88px;text-align:right;flex-shrink:0;white-space:nowrap}
+.sv-amount-wrap{display:flex;flex-direction:column;align-items:flex-end;width:92px;flex-shrink:0}
+.sv-amount{font-size:13px;font-weight:600;font-family:'DM Serif Display',serif;text-align:right;white-space:nowrap}
+.sv-acc{font-size:10px;font-weight:500;text-align:right;white-space:nowrap;opacity:.7;margin-top:1px}
 .sv-divider{display:flex;align-items:center;gap:8px;padding:10px 0 4px;color:var(--faint);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
 .sv-divider::before,.sv-divider::after{content:'';flex:1;height:1px;background:var(--border-l)}
 .sv-divider::before{display:none}

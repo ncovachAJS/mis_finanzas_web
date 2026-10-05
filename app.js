@@ -693,19 +693,27 @@ function renderMonthlySavings(months, year) {
   ];
   const maxAbs = Math.max(...allSavings, 1);
 
+  // Acumulado desde enero hasta ese mes (incluido), con el mismo criterio que la barra:
+  // real para los meses ya pasados, proyectado para los que faltan.
+  let running = 0;
   const makeRow = (m, isFuture) => {
     const hasDat = m.totalIncomes > 0 || m.totalExpenses > 0;
     const saving = isFuture ? (hasDat ? futureSaving(m) : avgSaving) : m.savings;
     const isEst  = isFuture && !hasDat;   // estimated via avg, no real data
     const pos    = saving >= 0;
     const pct    = Math.min(Math.abs(saving) / maxAbs * 100, 100);
+    running += saving;
+    const accPos = running >= 0;
     return `
       <div class="sv-row ${isFuture ? 'sv-future' : ''}">
         <span class="sv-month">${MONTHS_SHORT[m.month - 1]}${isEst ? '<span class="sv-proj-tag">~</span>' : ''}</span>
         <div class="sv-bar-track">
           <div class="sv-bar-fill ${pos ? 'pos' : 'neg'}${isEst ? ' proj' : ''}" style="width:${pct.toFixed(1)}%"></div>
         </div>
-        <span class="sv-amount ${pos ? 'c-income' : 'c-expense'}" style="${isFuture ? 'opacity:.7' : ''}">${pos ? '+' : ''}${fmtEur(saving)}</span>
+        <div class="sv-amount-wrap" style="${isFuture ? 'opacity:.7' : ''}">
+          <span class="sv-amount ${pos ? 'c-income' : 'c-expense'}">${pos ? '+' : ''}${fmtEur(saving)}</span>
+          <span class="sv-acc ${accPos ? 'c-income' : 'c-expense'}" title="Acumulado desde enero">Σ ${accPos ? '+' : ''}${fmtEur(running)}</span>
+        </div>
       </div>`;
   };
 
