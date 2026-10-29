@@ -1493,7 +1493,56 @@ async function loadCategories() {
     state.categories = data ?? [];
     populateCategorySelect();
     populateGastosFilterSelects();
+    migrateLegacyCategoryIcons();
   } catch(e) { /* non-critical */ }
+}
+
+/* Mapeo de emoji habituales a su icono plano equivalente, para que las categorías
+   creadas antes de tener el selector de iconos se actualicen solas sin que el
+   usuario tenga que editarlas una a una. */
+const EMOJI_TO_FLAT_ICON = {
+  '🏠':'home', '🏡':'home',
+  '🛒':'cart',
+  '🛍️':'bag', '👜':'bag',
+  '🚗':'car', '🚙':'car', '🚕':'car', '🚘':'car',
+  '⚡':'bills', '💡':'bills',
+  '👕':'shirt', '👔':'shirt', '👗':'shirt', '👚':'shirt',
+  '🎉':'fun', '🎊':'fun', '🎮':'fun', '🎬':'fun', '🎵':'fun', '🎶':'fun', '🎭':'fun',
+  '❤️':'health', '💊':'health', '🏥':'health', '🩺':'health',
+  '📚':'book', '📖':'book', '🎓':'book',
+  '✈️':'plane', '🧳':'plane',
+  '🐶':'pets', '🐱':'pets', '🐾':'pets',
+  '📱':'tech', '💻':'tech', '🖥️':'tech',
+  '☕':'coffee', '🍵':'coffee',
+  '💪':'sport', '⚽':'sport', '🏋️':'sport', '🏀':'sport',
+  '💰':'wallet', '👛':'wallet', '💵':'wallet',
+  '👨‍👩‍👧‍👦':'family', '👪':'family', '👶':'family',
+  '🎁':'gift',
+  '🏦':'savings',
+  '🍔':'food', '🍕':'food', '🍽️':'food', '🍜':'food', '🍳':'food',
+  '🏷️':'other', '📦':'other',
+};
+
+/** Actualiza en segundo plano las categorías con emoji antiguo a su icono plano
+    equivalente, sin que el usuario tenga que hacer nada. */
+async function migrateLegacyCategoryIcons() {
+  const toMigrate = state.categories.filter(c => c.icon && EMOJI_TO_FLAT_ICON[c.icon]);
+  if (!toMigrate.length) return;
+  let changed = false;
+  for (const c of toMigrate) {
+    try {
+      await api('PATCH', `/categories/${c.id}`, { icon: EMOJI_TO_FLAT_ICON[c.icon] });
+      c.icon = EMOJI_TO_FLAT_ICON[c.icon];
+      changed = true;
+    } catch(e) { /* se reintentará en la próxima carga */ }
+  }
+  if (!changed) return;
+  populateCategorySelect();
+  populateGastosFilterSelects();
+  if (document.getElementById('categories-content')) renderCategoriesInProfile();
+  if (activeTab === 'gastos') loadGastos();
+  if (activeTab === 'ingresos') loadIngresos();
+  if (activeTab === 'dashboard') loadDashboard();
 }
 
 function populateCategorySelect() {
