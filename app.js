@@ -2653,48 +2653,160 @@ function duplicateIncome(id) {
   document.getElementById('i-amount').select();
 }
 
-/** Texto del detalle del gasto/ingreso, listo para compartir. */
-function expenseShareText(e) {
-  const acc = e.accountName || state.accounts.find(a => String(a.id) === String(e.accountId))?.name;
-  const lines = [
-    `${e.name} — ${fmtEur(e.amount)}`,
-    [acc, e.categoryName, EXPENSE_TYPES[e.expenseType]?.label].filter(Boolean).join(' · '),
-    `${e.isPaid ? 'Pagado' : 'Pendiente'} · ${MONTHS[e.month - 1]} ${e.year}`,
-  ];
-  if (e.notes) lines.push(e.notes);
-  return lines.filter(Boolean).join('\n');
-}
-function incomeShareText(i) {
-  const acc = i.accountName || state.accounts.find(a => String(a.id) === String(i.accountId))?.name;
-  const lines = [
-    `${i.name} — ${fmtEur(i.amount)}`,
-    [acc, recLabel(i.recurrence)].filter(Boolean).join(' · '),
-    `${i.isPaid ? 'Cobrado' : 'Pendiente'} · ${MONTHS[i.month - 1]} ${i.year}`,
-  ];
-  if (i.notes) lines.push(i.notes);
-  return lines.filter(Boolean).join('\n');
+/** Datos para la tarjeta compartible de un gasto o ingreso. */
+function buildShareCardData(kind, item) {
+  const isExpense = kind === 'expense';
+  const acc = item.accountName || state.accounts.find(a => String(a.id) === String(item.accountId))?.name;
+  const meta = (isExpense
+    ? [acc, item.categoryName, EXPENSE_TYPES[item.expenseType]?.label]
+    : [acc, recLabel(item.recurrence)]
+  ).filter(Boolean).join('   ·   ');
+  return {
+    typeLabel: isExpense ? 'GASTO' : 'INGRESO',
+    name: item.name,
+    amountText: (isExpense ? '− ' : '+ ') + fmtEur(item.amount),
+    amountColor: isExpense ? '#ffa6a6' : '#86eab8',
+    meta,
+    statusLabel: item.isPaid ? (isExpense ? 'Pagado' : 'Cobrado') : 'Pendiente',
+    statusColor: item.isPaid ? '#2b7d54' : '#c07a08',
+    dateLine: `${MONTHS[item.month - 1]} ${item.year}`,
+  };
 }
 
-/** Comparte con el diálogo nativo si está disponible; si no, lo copia al portapapeles. */
-async function shareText(title, text) {
-  if (navigator.share) {
-    try { await navigator.share({ title, text }); } catch(e) { /* el usuario canceló */ }
-    return;
+/** Ajusta texto a varias líneas, cortando con "…" a partir de maxLines para no desbordar la tarjeta. */
+function _shareCardWrapText(ctx, text, x, y, maxWidth, lineHeight, maxLines = Infinity) {
+  const words = String(text).split(' ');
+  const lines = [];
+  let line = '';
+  for (const word of words) {
+    const test = line ? line + ' ' + word : word;
+    if (line && ctx.measureText(test).width > maxWidth) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = test;
+    }
   }
+  lines.push(line);
+
+  const shown = lines.length > maxLines ? lines.slice(0, maxLines) : lines;
+  if (lines.length > maxLines) {
+    let last = shown[maxLines - 1];
+    while (last.length && ctx.measureText(last + '…').width > maxWidth) {
+      last = last.slice(0, -1).trimEnd();
+    }
+    shown[maxLines - 1] = last + '…';
+  }
+  shown.forEach((l, i) => ctx.fillText(l, x, y + i * lineHeight));
+  return y + (shown.length - 1) * lineHeight;
+}
+function _shareCardRoundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/** Dibuja la tarjeta en un <canvas> oculto y devuelve un PNG como Blob. */
+async function renderShareCardImage(data) {
+  if (document.fonts?.ready) await document.fonts.ready;
+  const W = 720, H = 640, DPR = 2, pad = 56;
+  const canvas = document.createElement('canvas');
+  canvas.width = W * DPR; canvas.height = H * DPR;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(DPR, DPR);
+
+  _shareCardRoundRect(ctx, 0, 0, W, H, 32);
+  ctx.clip();
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, '#132f3a');
+  grad.addColorStop(1, '#1e6a7a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  let y = pad + 20;
+  ctx.fillStyle = 'rgba(255,255,255,.55)';
+  ctx.font = '700 15px "DM Sans"';
+  ctx.fillText('💶  CUENTAS CLARAS', pad, y);
+
+  y += 64;
+  ctx.fillStyle = 'rgba(255,255,255,.7)';
+  ctx.font = '700 15px "DM Sans"';
+  ctx.fillText(data.typeLabel, pad, y);
+
+  y += 50;
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '400 46px "DM Serif Display"';
+  y = _shareCardWrapText(ctx, data.name, pad, y, W - pad * 2, 54, 2);
+
+  y += 70;
+  ctx.fillStyle = data.amountColor;
+  ctx.font = '400 72px "DM Serif Display"';
+  ctx.fillText(data.amountText, pad, y);
+
+  y += 56;
+  ctx.fillStyle = 'rgba(255,255,255,.75)';
+  ctx.font = '500 20px "DM Sans"';
+  y = _shareCardWrapText(ctx, data.meta, pad, y, W - pad * 2, 28, 2);
+
+  y += 44;
+  ctx.font = '700 16px "DM Sans"';
+  const pillW = ctx.measureText(data.statusLabel).width + 32;
+  ctx.fillStyle = data.statusColor;
+  _shareCardRoundRect(ctx, pad, y, pillW, 36, 18);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(data.statusLabel, pad + 16, y + 19);
+  ctx.textBaseline = 'alphabetic';
+
+  ctx.fillStyle = 'rgba(255,255,255,.6)';
+  ctx.font = '500 16px "DM Sans"';
+  ctx.fillText(data.dateLine, pad + pillW + 16, y + 24);
+
+  const footY = H - pad;
+  ctx.strokeStyle = 'rgba(255,255,255,.18)';
+  ctx.beginPath(); ctx.moveTo(pad, footY - 36); ctx.lineTo(W - pad, footY - 36); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.5)';
+  ctx.font = '500 14px "DM Sans"';
+  ctx.fillText('Cuentas Claras', pad, footY);
+
+  return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+}
+
+/** Genera la tarjeta como imagen y la comparte; si el navegador no sabe compartir
+ *  archivos, la descarga. */
+async function shareAsImage(kind, item) {
   try {
-    await navigator.clipboard.writeText(text);
-    showToast('Copiado al portapapeles', 'success');
+    const data = buildShareCardData(kind, item);
+    const blob = await renderShareCardImage(data);
+    if (!blob) throw new Error('sin imagen');
+    const fileName = (kind === 'expense' ? 'gasto' : 'ingreso') + '.png';
+    const file = new File([blob], fileName, { type: 'image/png' });
+    const title = kind === 'expense' ? 'Gasto · Cuentas Claras' : 'Ingreso · Cuentas Claras';
+    if (navigator.canShare?.({ files: [file] })) {
+      try { await navigator.share({ files: [file], title }); } catch(e) { /* el usuario canceló */ }
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fileName; a.click();
+    URL.revokeObjectURL(url);
+    showToast('Imagen descargada', 'success');
   } catch(e) {
-    showToast('No se pudo compartir', 'error');
+    showToast('No se pudo generar la imagen', 'error');
   }
 }
 function shareExpense(id) {
   const exp = state.expenses.find(e => e.id === id);
-  if (exp) shareText('Gasto · Cuentas Claras', expenseShareText(exp));
+  if (exp) shareAsImage('expense', exp);
 }
 function shareIncome(id) {
   const inc = state.incomes.find(i => i.id === id);
-  if (inc) shareText('Ingreso · Cuentas Claras', incomeShareText(inc));
+  if (inc) shareAsImage('income', inc);
 }
 
 async function saveIncome() {
