@@ -77,6 +77,7 @@ h1{font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;line-height:1
 .bnav-badge{position:absolute;top:-4px;right:-8px;background:var(--accent);color:#fff;border-radius:8px;font-size:9px;font-weight:700;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 4px;line-height:1}
 .bnav-badge:empty,.bnav-badge[data-zero="1"]{display:none}
 .bnav-fab{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:var(--accent);border:none;color:#fff;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.3);transition:transform .15s,box-shadow .15s;-webkit-tap-highlight-color:transparent;flex-shrink:0;margin:0 2px}
+.bnav-divider{width:1px;align-self:stretch;margin:6px 2px;background:rgba(255,255,255,.14);flex-shrink:0}
 .bnav-fab:active{transform:scale(.9);box-shadow:0 1px 6px rgba(0,0,0,.25)}
 .bnav-fab.open{transform:rotate(45deg)}
 /* Quick-add sheet */
