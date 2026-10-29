@@ -63,6 +63,10 @@ const state = {
   detailInvestmentId:       null,
   pendingDeleteFn:   null,
   pendingRecoveryCode: null,
+  twoFactorTempToken: null,
+  twoFactorSetupSecret: null,
+  twoFactorPasswordAction: null,
+  pendingBackupCodes: null,
   pendingDeleteFollowingFn: null,
 };
 
@@ -289,6 +293,151 @@ async function regenerateRecoveryCode() {
   } finally { btn.disabled = false; btn.textContent = 'Generar nuevo código'; }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   VERIFICACIÓN EN DOS PASOS (2FA)
+════════════════════════════════════════════════════════════════ */
+function openTwoFactorLogin(tempToken) {
+  state.twoFactorTempToken = tempToken;
+  document.getElementById('tfa-verify-code').value = '';
+  document.getElementById('tfa-verify-err').classList.remove('on');
+  openModal('twofa-verify-modal');
+  setTimeout(() => document.getElementById('tfa-verify-code').focus(), 100);
+}
+function cancelTwoFactorLogin() {
+  state.twoFactorTempToken = null;
+  closeModal('twofa-verify-modal');
+}
+
+async function doVerifyTwoFactorLogin() {
+  const code = document.getElementById('tfa-verify-code').value.trim();
+  const errEl = document.getElementById('tfa-verify-err');
+  errEl.classList.remove('on');
+  if (!code) { errEl.textContent = 'Introduce un código'; errEl.classList.add('on'); return; }
+  const btn = document.getElementById('tfa-verify-btn');
+  btn.disabled = true; btn.textContent = 'Verificando…';
+  try {
+    const data = await api('POST', '/auth/2fa/verify-login', { tempToken: state.twoFactorTempToken, code });
+    if (!data) return;
+    state.twoFactorTempToken = null;
+    clearUserCache();
+    resetUserState();
+    state.token = data.token;
+    state.user  = data.user;
+    localStorage.setItem('finanzas_token', state.token);
+    localStorage.setItem('finanzas_user', JSON.stringify(state.user));
+    closeModal('twofa-verify-modal');
+    startApp();
+  } catch(e) {
+    errEl.textContent = e.message || 'Código incorrecto';
+    errEl.classList.add('on');
+  } finally { btn.disabled = false; btn.textContent = 'Verificar'; }
+}
+
+/** Pinta la sección de 2FA del perfil según esté activado o no. */
+function render2faSection() {
+  const el = document.getElementById('p-2fa-section');
+  if (!el) return;
+  if (state.user?.totpEnabled) {
+    el.innerHTML = `
+      <p style="font-size:12px;color:var(--success);margin-bottom:10px">✓ Activada. Te pedirá un código al iniciar sesión.</p>
+      <button class="btn-s" style="width:100%;margin-bottom:8px" onclick="openTwoFactorPassword('regenerate-backup','Generar nuevos códigos de respaldo')">Generar nuevos códigos de respaldo</button>
+      <button class="btn-danger" style="width:100%" onclick="openTwoFactorPassword('disable','Desactivar verificación en dos pasos')">Desactivar</button>`;
+  } else {
+    el.innerHTML = `
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Pide un código de tu móvil además de la contraseña al iniciar sesión, usando una app como Google Authenticator.</p>
+      <button class="btn-s" style="width:100%" onclick="openTwoFactorSetup()">Activar</button>`;
+  }
+}
+
+async function openTwoFactorSetup() {
+  try {
+    const data = await api('POST', '/auth/2fa/setup');
+    if (!data) return;
+    state.twoFactorSetupSecret = data.secret;
+    document.getElementById('tfa-qr-img').src = data.qrCodeDataUrl;
+    document.getElementById('tfa-manual-secret').textContent = data.secret.match(/.{1,4}/g).join(' ');
+    document.getElementById('tfa-setup-code').value = '';
+    document.getElementById('tfa-setup-err').classList.remove('on');
+    openModal('twofa-setup-modal');
+  } catch(e) {
+    showToast(e.message || 'No se pudo iniciar la activación', 'error');
+  }
+}
+
+async function doEnableTwoFactor() {
+  const code = document.getElementById('tfa-setup-code').value.trim();
+  const errEl = document.getElementById('tfa-setup-err');
+  errEl.classList.remove('on');
+  if (!/^\d{6}$/.test(code)) { errEl.textContent = 'Introduce el código de 6 dígitos'; errEl.classList.add('on'); return; }
+  const btn = document.getElementById('tfa-setup-btn');
+  btn.disabled = true; btn.textContent = 'Activando…';
+  try {
+    const data = await api('POST', '/auth/2fa/enable', { secret: state.twoFactorSetupSecret, code });
+    state.twoFactorSetupSecret = null;
+    state.user.totpEnabled = true;
+    localStorage.setItem('finanzas_user', JSON.stringify(state.user));
+    closeModal('twofa-setup-modal');
+    render2faSection();
+    openBackupCodesModal(data.backupCodes);
+  } catch(e) {
+    errEl.textContent = e.message || 'Código incorrecto';
+    errEl.classList.add('on');
+  } finally { btn.disabled = false; btn.textContent = 'Activar'; }
+}
+
+function openBackupCodesModal(codes) {
+  state.pendingBackupCodes = codes;
+  document.getElementById('backup-codes-list').innerHTML = codes.join('<br>');
+  openModal('backup-codes-modal');
+}
+function closeBackupCodesModal() {
+  state.pendingBackupCodes = null;
+  closeModal('backup-codes-modal');
+}
+async function copyBackupCodes() {
+  const btn = document.getElementById('backup-codes-copy-btn');
+  try {
+    await navigator.clipboard.writeText((state.pendingBackupCodes || []).join('\n'));
+    btn.textContent = '✓ Copiado';
+    setTimeout(() => { btn.textContent = '📋 Copiar'; }, 1500);
+  } catch(e) { showToast('No se pudo copiar, selecciónalos a mano', 'error'); }
+}
+
+function openTwoFactorPassword(action, title) {
+  state.twoFactorPasswordAction = action;
+  document.getElementById('tfa-password-title').textContent = title;
+  document.getElementById('tfa-password-input').value = '';
+  document.getElementById('tfa-password-err').classList.remove('on');
+  openModal('twofa-password-modal');
+}
+
+async function confirmTwoFactorPassword() {
+  const currentPassword = document.getElementById('tfa-password-input').value;
+  const errEl = document.getElementById('tfa-password-err');
+  errEl.classList.remove('on');
+  if (!currentPassword) { errEl.textContent = 'Introduce tu contraseña actual'; errEl.classList.add('on'); return; }
+  const action = state.twoFactorPasswordAction;
+  const btn = document.getElementById('tfa-password-btn');
+  btn.disabled = true; btn.textContent = 'Confirmando…';
+  try {
+    if (action === 'disable') {
+      await api('POST', '/auth/2fa/disable', { currentPassword });
+      state.user.totpEnabled = false;
+      localStorage.setItem('finanzas_user', JSON.stringify(state.user));
+      closeModal('twofa-password-modal');
+      render2faSection();
+      showToast('Verificación en dos pasos desactivada');
+    } else {
+      const data = await api('POST', '/auth/2fa/backup-codes/regenerate', { currentPassword });
+      closeModal('twofa-password-modal');
+      openBackupCodesModal(data.backupCodes);
+    }
+  } catch(e) {
+    errEl.textContent = e.message || 'Contraseña actual incorrecta';
+    errEl.classList.add('on');
+  } finally { btn.disabled = false; btn.textContent = 'Confirmar'; }
+}
+
 async function doLogin() {
   const email    = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
@@ -300,6 +449,10 @@ async function doLogin() {
   try {
     const data = await api('POST', '/auth/login', { email, password });
     if (!data) return;
+    if (data.requires2fa) {
+      openTwoFactorLogin(data.tempToken);
+      return;
+    }
     clearUserCache();
     resetUserState();
     state.token = data.token ?? data.access_token;
@@ -1119,6 +1272,7 @@ function renderExpenseCard(e) {
             </button>
             <button class="act-btn" onclick="openExpenseModal('${e.id}')">✏️ Editar</button>
             <button class="act-btn" onclick="duplicateExpense('${e.id}')" title="Duplicar">📋</button>
+            <button class="act-btn" onclick="shareExpense('${e.id}')" title="Compartir">📤</button>
             <button class="act-btn del" onclick="askDeleteExpense('${e.id}')">🗑</button>
           </div>
         </div>
@@ -1205,6 +1359,7 @@ function renderIngresos() {
             </button>
             <button class="act-btn" onclick="openIncomeModal('${i.id}')">✏️ Editar</button>
             <button class="act-btn" onclick="duplicateIncome('${i.id}')" title="Duplicar">📋</button>
+            <button class="act-btn" onclick="shareIncome('${i.id}')" title="Compartir">📤</button>
             <button class="act-btn del" onclick="askDeleteIncome('${i.id}')">🗑</button>
           </div>
         </div>
@@ -1990,6 +2145,7 @@ function openProfileModal() {
   document.getElementById('p-pass-err').classList.remove('on');
   document.getElementById('p-recovery-pass').value = '';
   document.getElementById('p-recovery-err').classList.remove('on');
+  render2faSection();
   updateThemeSelector();
   updateAvatarUI(state.user?.avatar || null);
   showProfileTab('cuenta');
@@ -2495,6 +2651,50 @@ function duplicateIncome(id) {
   document.getElementById('income-modal-title').textContent = 'Duplicar ingreso';
   document.getElementById('i-amount').focus();
   document.getElementById('i-amount').select();
+}
+
+/** Texto del detalle del gasto/ingreso, listo para compartir. */
+function expenseShareText(e) {
+  const acc = e.accountName || state.accounts.find(a => String(a.id) === String(e.accountId))?.name;
+  const lines = [
+    `${e.name} — ${fmtEur(e.amount)}`,
+    [acc, e.categoryName, EXPENSE_TYPES[e.expenseType]?.label].filter(Boolean).join(' · '),
+    `${e.isPaid ? 'Pagado' : 'Pendiente'} · ${MONTHS[e.month - 1]} ${e.year}`,
+  ];
+  if (e.notes) lines.push(e.notes);
+  return lines.filter(Boolean).join('\n');
+}
+function incomeShareText(i) {
+  const acc = i.accountName || state.accounts.find(a => String(a.id) === String(i.accountId))?.name;
+  const lines = [
+    `${i.name} — ${fmtEur(i.amount)}`,
+    [acc, recLabel(i.recurrence)].filter(Boolean).join(' · '),
+    `${i.isPaid ? 'Cobrado' : 'Pendiente'} · ${MONTHS[i.month - 1]} ${i.year}`,
+  ];
+  if (i.notes) lines.push(i.notes);
+  return lines.filter(Boolean).join('\n');
+}
+
+/** Comparte con el diálogo nativo si está disponible; si no, lo copia al portapapeles. */
+async function shareText(title, text) {
+  if (navigator.share) {
+    try { await navigator.share({ title, text }); } catch(e) { /* el usuario canceló */ }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('Copiado al portapapeles', 'success');
+  } catch(e) {
+    showToast('No se pudo compartir', 'error');
+  }
+}
+function shareExpense(id) {
+  const exp = state.expenses.find(e => e.id === id);
+  if (exp) shareText('Gasto · Cuentas Claras', expenseShareText(exp));
+}
+function shareIncome(id) {
+  const inc = state.incomes.find(i => i.id === id);
+  if (inc) shareText('Ingreso · Cuentas Claras', incomeShareText(inc));
 }
 
 async function saveIncome() {

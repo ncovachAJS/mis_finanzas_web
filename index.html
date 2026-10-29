@@ -77,6 +77,69 @@
   </div>
 </div>
 
+<!-- Modal: verificar código de 2FA al entrar -->
+<div class="modal" id="twofa-verify-modal">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Verificación en dos pasos</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Introduce el código de tu app autenticadora, o uno de tus códigos de respaldo.</p>
+    <div class="auth-err" id="tfa-verify-err"></div>
+    <div class="fld"><label>Código</label><input type="text" id="tfa-verify-code" placeholder="123456" inputmode="numeric" autocomplete="one-time-code"></div>
+    <div class="modal-btns">
+      <button class="btn-s" onclick="cancelTwoFactorLogin()">Cancelar</button>
+      <button class="btn-p" onclick="doVerifyTwoFactorLogin()" id="tfa-verify-btn">Verificar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: activar 2FA (QR + código) -->
+<div class="modal" id="twofa-setup-modal">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Activar verificación en dos pasos</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Escanea este código con una app autenticadora (Google Authenticator, Authy…).</p>
+    <div style="text-align:center;margin-bottom:14px">
+      <img id="tfa-qr-img" src="" alt="Código QR" style="width:180px;height:180px;border-radius:12px;background:#fff;padding:8px">
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:4px">¿No puedes escanearlo? Introduce este código a mano:</p>
+    <div class="recovery-code" id="tfa-manual-secret" style="font-size:15px;letter-spacing:.08em;margin-bottom:14px">XXXX</div>
+    <div class="auth-err" id="tfa-setup-err"></div>
+    <div class="fld"><label>Código de 6 dígitos de la app</label><input type="text" id="tfa-setup-code" placeholder="123456" inputmode="numeric" autocomplete="one-time-code"></div>
+    <div class="modal-btns">
+      <button class="btn-s" onclick="closeModal('twofa-setup-modal')">Cancelar</button>
+      <button class="btn-p" onclick="doEnableTwoFactor()" id="tfa-setup-btn">Activar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: mostrar códigos de respaldo del 2FA (solo se ven una vez) -->
+<div class="modal" id="backup-codes-modal">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Tus códigos de respaldo</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Guárdalos en un sitio seguro. Cada uno sirve una sola vez para entrar si pierdes el acceso a tu app autenticadora, y <strong>no podrás volver a verlos</strong>.</p>
+    <div class="recovery-code" id="backup-codes-list" style="font-size:16px;line-height:1.8;text-align:left;padding:16px 20px"></div>
+    <div class="modal-btns">
+      <button class="btn-s" onclick="copyBackupCodes()" id="backup-codes-copy-btn">📋 Copiar</button>
+      <button class="btn-p" onclick="closeBackupCodesModal()">Ya los he guardado</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: pedir contraseña para desactivar 2FA o regenerar códigos -->
+<div class="modal" id="twofa-password-modal">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="tfa-password-title">Confirma tu contraseña</div>
+    <div class="auth-err" id="tfa-password-err"></div>
+    <div class="fld"><label>Contraseña actual</label><input type="password" id="tfa-password-input" placeholder="••••••"></div>
+    <div class="modal-btns">
+      <button class="btn-s" onclick="closeModal('twofa-password-modal')">Cancelar</button>
+      <button class="btn-p" id="tfa-password-btn" onclick="confirmTwoFactorPassword()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ APP ═════════════════════════════════════════════════════════ -->
 <div id="app" style="display:none">
 
@@ -663,6 +726,9 @@
       <div class="fld"><label>Contraseña actual</label><input type="password" id="p-recovery-pass" placeholder="••••••"></div>
       <div class="auth-err" id="p-recovery-err" style="margin-bottom:12px"></div>
       <button class="btn-s" style="width:100%;margin-bottom:20px" onclick="regenerateRecoveryCode()" id="p-recovery-btn">Generar nuevo código</button>
+
+      <div class="slbl">Verificación en dos pasos (2FA)</div>
+      <div id="p-2fa-section" style="margin-bottom:20px"></div>
 
       <button class="btn-danger" style="width:100%" onclick="askLogout()">Cerrar sesión</button>
     </div>
