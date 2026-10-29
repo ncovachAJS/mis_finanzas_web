@@ -99,6 +99,12 @@ const state = {
   detailItem: null,
   receiptTargetId: null,
   receiptObjectUrl: null,
+  sePaidByMe: true,
+  settleIPaid: true,
+  sharedLinked: false,
+  sharedPartner: null,
+  sharedBalance: 0,
+  sharedItems: [],
   month: new Date().getMonth() + 1,
   year:  new Date().getFullYear(),
   dashYear: new Date().getFullYear(),
@@ -639,6 +645,7 @@ function showTab(tab) {
   document.getElementById('view-' + tab).classList.add('on');
   activeTab = tab;
   if (tab === 'dashboard') loadDashboard();
+  if (tab === 'shared') loadSharedExpenses();
 }
 
 function showDashTab(which) {
@@ -3462,6 +3469,240 @@ document.getElementById('cat-color').addEventListener('input', e => {
   const v = e.target.value;
   if (/^#[0-9a-fA-F]{6}$/.test(v)) document.getElementById('cat-color-picker').value = v;
 });
+
+/* ═══════════════════════════════════════════════════════════
+   COMPARTIDO (gastos a medias entre dos personas, tipo Splitwise)
+════════════════════════════════════════════════════════════════ */
+async function loadSharedExpenses() {
+  const el = document.getElementById('shared-content');
+  if (!el) return;
+  el.innerHTML = ldg();
+  try {
+    const p = await api('GET', '/partner');
+    if (p === null) return;
+    state.sharedLinked = !!p.linked;
+    state.sharedPartner = p.partner;
+    if (!state.sharedLinked) { renderSharedView(); return; }
+    const data = await api('GET', '/shared-expenses');
+    if (data === null) return;
+    state.sharedBalance = data.balance;
+    state.sharedItems = data.items ?? [];
+    state.sharedPartner = data.partner ?? state.sharedPartner;
+    renderSharedView();
+  } catch(e) {
+    el.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><h3>Error</h3><p>${e.message}</p></div>`;
+  }
+}
+
+function renderSharedView() {
+  const el = document.getElementById('shared-content');
+  if (!el) return;
+
+  if (!state.sharedLinked) {
+    el.innerHTML = `
+      <div class="networth-card" style="text-align:center">
+        ${catIconSvg('family', 32)}
+        <h3 style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:17px;margin:10px 0 4px">Vincula a tu pareja</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Introduce el email con el que tiene su cuenta en Cuentas Claras para empezar a repartir gastos a medias.</p>
+        <div class="fld" style="text-align:left">
+          <label>Email de tu pareja</label>
+          <input type="email" id="partner-email" placeholder="pareja@email.com">
+          <div class="err-msg" id="partner-email-err">Introduce un email válido</div>
+        </div>
+        <button class="btn-p" onclick="linkPartner()" id="partner-link-btn">Vincular</button>
+      </div>`;
+    return;
+  }
+
+  const bal = state.sharedBalance;
+  const abs = fmtEur(Math.abs(bal));
+  const partnerName = state.sharedPartner?.name ?? 'tu pareja';
+  const heroClass = bal < -0.004 ? 'neg' : '';
+  const heroText = bal > 0.004 ? `${partnerName} te debe` : bal < -0.004 ? `Le debes a ${partnerName}` : 'Estáis en paz';
+
+  const itemsHtml = state.sharedItems.length === 0
+    ? `<div class="empty" style="padding:28px 16px"><div class="empty-ico">🤝</div><h3>Sin movimientos</h3><p>Añade el primer gasto compartido.</p></div>`
+    : state.sharedItems.map(it => {
+        if (it.type === 'settlement') {
+          const who = it.iPaid ? `Pagaste a ${esc(partnerName)}` : `${esc(partnerName)} te pagó`;
+          return `
+            <div class="rcard">
+              <div class="ubar ${it.iPaid ? 'expense-paid' : 'paid'}"></div>
+              <div class="rbody">
+                <div class="rmeta">
+                  <div class="rico" style="background:#2563eb2e;color:#2563eb">${catIconSvg('wallet', 20)}</div>
+                  <div class="rmeta-main">
+                    <div class="rcat">${fmtDate(it.date)} · Pago</div>
+                    <div class="rtitle">${who}</div>
+                    ${it.note ? `<div class="rnotes">${esc(it.note)}</div>` : ''}
+                  </div>
+                  <div class="ramount ${it.iPaid ? 'expense' : 'income'}">${it.iPaid ? '− ' : '+ '}${fmtEur(it.amount)}</div>
+                </div>
+                <div class="rfoot">
+                  <span></span>
+                  <div class="ractions">
+                    <button class="act-btn del" onclick="deleteSettlement('${it.id}')">${FICO.trash}</button>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+        }
+        const who = it.iPaid ? 'Pagaste tú' : `Pagó ${esc(partnerName)}`;
+        return `
+          <div class="rcard">
+            <div class="ubar ${it.iPaid ? 'expense-paid' : 'paid'}"></div>
+            <div class="rbody">
+              <div class="rmeta">
+                <div class="rico" style="background:${it.iPaid ? '#b8303022' : '#2b7d5422'};color:${it.iPaid ? '#b83030' : '#2b7d54'}">${catIconSvg('cart', 20)}</div>
+                <div class="rmeta-main">
+                  <div class="rcat">${fmtDate(it.date)} · ${who}</div>
+                  <div class="rtitle">${esc(it.description)}</div>
+                  ${it.notes ? `<div class="rnotes">${esc(it.notes)}</div>` : ''}
+                </div>
+                <div class="ramount">${fmtEur(it.amount)}</div>
+              </div>
+              <div class="rfoot">
+                <span class="spill s-pending">Te toca: ${fmtEur(it.amount / 2)}</span>
+                <div class="ractions">
+                  <button class="act-btn del" onclick="deleteSharedExpense('${it.id}')">${FICO.trash}</button>
+                </div>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+
+  el.innerHTML = `
+    <div class="balance-hero ${heroClass}">
+      <div class="balance-hero-label">${heroText}</div>
+      <div class="balance-hero-amount">${bal === 0 ? '0,00 €' : abs}</div>
+      <div class="balance-hero-sub">Compartido con ${esc(partnerName)}</div>
+    </div>
+    <div class="ractions" style="margin-bottom:18px">
+      <button class="btn-p" style="flex:1;margin-top:0" onclick="openSharedExpenseModal()">＋ Gasto compartido</button>
+      <button class="btn-s" onclick="openSettleModal()">Registrar pago</button>
+    </div>
+    ${itemsHtml}
+    <button class="btn-danger" style="width:100%;margin-top:14px" onclick="unlinkPartner()">Desvincular pareja</button>
+  `;
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+}
+
+async function linkPartner() {
+  const email = document.getElementById('partner-email').value.trim();
+  const errEl = document.getElementById('partner-email-err');
+  if (!email || !email.includes('@')) { errEl.classList.add('on'); return; }
+  errEl.classList.remove('on');
+  const btn = document.getElementById('partner-link-btn');
+  btn.disabled = true; btn.textContent = 'Vinculando…';
+  try {
+    await api('POST', '/partner/link', { email });
+    showToast('¡Vinculado! Ya podéis compartir gastos', 'success');
+    await loadSharedExpenses();
+  } catch(e) {
+    showToast(e.message || 'No se pudo vincular', 'error');
+  } finally { btn.disabled = false; btn.textContent = 'Vincular'; }
+}
+
+async function unlinkPartner() {
+  if (!confirm('¿Desvincular a tu pareja? Se mantendrá el historial, pero dejaréis de poder añadir gastos compartidos hasta volver a vincularos.')) return;
+  try {
+    await api('DELETE', '/partner');
+    showToast('Pareja desvinculada');
+    await loadSharedExpenses();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+function openSharedExpenseModal() {
+  document.getElementById('se-desc').value = '';
+  document.getElementById('se-amount').value = '';
+  document.getElementById('se-notes').value = '';
+  document.getElementById('se-date').value = new Date().toISOString().slice(0, 10);
+  ['se-desc-err','se-amount-err'].forEach(id => document.getElementById(id).classList.remove('on'));
+  setPaidByMe(true);
+  openModal('shared-expense-modal');
+}
+
+function setPaidByMe(val) {
+  state.sePaidByMe = val;
+  const btns = document.querySelectorAll('#se-paidby-toggle .dash-stab');
+  btns.forEach((b, i) => b.classList.toggle('on', (i === 0) === val));
+}
+
+async function saveSharedExpense() {
+  const description = document.getElementById('se-desc').value.trim();
+  const amount = parseFloat(document.getElementById('se-amount').value);
+  const date = document.getElementById('se-date').value || undefined;
+  const notes = document.getElementById('se-notes').value.trim() || undefined;
+  let ok = true;
+  if (!description) { document.getElementById('se-desc-err').classList.add('on'); ok = false; }
+  else document.getElementById('se-desc-err').classList.remove('on');
+  if (isNaN(amount) || amount <= 0) { document.getElementById('se-amount-err').classList.add('on'); ok = false; }
+  else document.getElementById('se-amount-err').classList.remove('on');
+  if (!ok) return;
+  const btn = document.getElementById('se-save-btn');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    await api('POST', '/shared-expenses', { description, amount, paidByMe: state.sePaidByMe, date, notes });
+    showToast('Gasto compartido añadido', 'success');
+    closeModal('shared-expense-modal');
+    await loadSharedExpenses();
+  } catch(e) {
+    showToast(e.message || 'Error al guardar', 'error');
+  } finally { btn.disabled = false; btn.textContent = 'Guardar'; }
+}
+
+async function deleteSharedExpense(id) {
+  if (!confirm('¿Eliminar este gasto compartido?')) return;
+  try {
+    await api('DELETE', `/shared-expenses/${id}`);
+    showToast('Gasto eliminado');
+    await loadSharedExpenses();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+function openSettleModal() {
+  document.getElementById('settle-amount').value = Math.abs(state.sharedBalance) > 0.004 ? Math.abs(state.sharedBalance).toFixed(2) : '';
+  document.getElementById('settle-note').value = '';
+  document.getElementById('settle-amount-err').classList.remove('on');
+  setSettleIPaid(state.sharedBalance < 0);
+  openModal('settle-modal');
+}
+
+function setSettleIPaid(val) {
+  state.settleIPaid = val;
+  const btns = document.querySelectorAll('#settle-direction-toggle .dash-stab');
+  btns.forEach((b, i) => b.classList.toggle('on', (i === 0) === val));
+}
+
+async function saveSettlement() {
+  const amount = parseFloat(document.getElementById('settle-amount').value);
+  const note = document.getElementById('settle-note').value.trim() || undefined;
+  if (isNaN(amount) || amount <= 0) { document.getElementById('settle-amount-err').classList.add('on'); return; }
+  document.getElementById('settle-amount-err').classList.remove('on');
+  const btn = document.getElementById('settle-save-btn');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    await api('POST', '/shared-expenses/settle', { amount, iPaid: state.settleIPaid, note });
+    showToast('Pago registrado', 'success');
+    closeModal('settle-modal');
+    await loadSharedExpenses();
+  } catch(e) {
+    showToast(e.message || 'Error al guardar', 'error');
+  } finally { btn.disabled = false; btn.textContent = 'Registrar'; }
+}
+
+async function deleteSettlement(id) {
+  if (!confirm('¿Eliminar este pago registrado?')) return;
+  try {
+    await api('DELETE', `/shared-expenses/settle/${id}`);
+    showToast('Pago eliminado');
+    await loadSharedExpenses();
+  } catch(e) { showToast(e.message, 'error'); }
+}
 
 /* ═══════════════════════════════════════════════════════════
    CLOSE MODAL ON BACKDROP CLICK

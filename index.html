@@ -11,7 +11,7 @@
   <script src="config.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=20261029n">
+  <link rel="stylesheet" href="styles.css?v=20261029o">
 </head>
 <body>
 
@@ -186,6 +186,10 @@
   <button class="bnav-item" id="tab-cuentas" onclick="showTab('cuentas')">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
     <span>Cuentas</span>
+  </button>
+  <button class="bnav-item" id="tab-shared" onclick="showTab('shared')">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span>Pareja</span>
   </button>
 </nav>
 
@@ -385,6 +389,15 @@
     <button class="add-btn" onclick="openInvestmentModal()">＋ Añadir</button>
   </div>
   <div id="inversiones-content">
+    <div class="ldg"><span class="ldg-dot"></span><span class="ldg-dot"></span><span class="ldg-dot"></span></div>
+  </div>
+</div>
+
+<div class="view" id="view-shared">
+  <div class="section-hdr">
+    <h2>Compartido</h2>
+  </div>
+  <div id="shared-content">
     <div class="ldg"><span class="ldg-dot"></span><span class="ldg-dot"></span><span class="ldg-dot"></span></div>
   </div>
 </div>
@@ -647,6 +660,71 @@
     <div class="modal-handle"></div>
     <div class="modal-title">Elige una categoría</div>
     <div class="cat-pick-list" id="category-picker-list"></div>
+  </div>
+</div>
+
+<!-- Modal Nuevo gasto compartido -->
+<div class="modal" id="shared-expense-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nuevo gasto compartido</div>
+    <div class="fld">
+      <label>Descripción <span class="req">*</span></label>
+      <input type="text" id="se-desc" placeholder="Ej: Cena, Alquiler…" maxlength="80">
+      <div class="err-msg" id="se-desc-err">Escribe una descripción</div>
+    </div>
+    <div class="fld">
+      <label>Importe total <span class="req">*</span></label>
+      <div class="amount-row"><span class="currency-prefix">€</span><input type="number" id="se-amount" placeholder="0.00" min="0.01" step="0.01"></div>
+      <div class="err-msg" id="se-amount-err">Introduce un importe válido</div>
+    </div>
+    <div class="fld">
+      <label>¿Quién lo pagó?</label>
+      <div class="dash-subtabs" id="se-paidby-toggle">
+        <button type="button" class="dash-stab on" onclick="setPaidByMe(true)">Yo</button>
+        <button type="button" class="dash-stab" onclick="setPaidByMe(false)">Mi pareja</button>
+      </div>
+    </div>
+    <div class="fld">
+      <label>Fecha</label>
+      <input type="date" id="se-date">
+    </div>
+    <div class="fld">
+      <label>Notas</label>
+      <textarea id="se-notes" placeholder="Opcional…" maxlength="300"></textarea>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-s" onclick="closeModal('shared-expense-modal')">Cancelar</button>
+      <button class="btn-p" onclick="saveSharedExpense()" id="se-save-btn">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Liquidar deuda -->
+<div class="modal" id="settle-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Registrar pago</div>
+    <div class="fld">
+      <label>Importe <span class="req">*</span></label>
+      <div class="amount-row"><span class="currency-prefix">€</span><input type="number" id="settle-amount" placeholder="0.00" min="0.01" step="0.01"></div>
+      <div class="err-msg" id="settle-amount-err">Introduce un importe válido</div>
+    </div>
+    <div class="fld">
+      <label>¿Quién paga a quién?</label>
+      <div class="dash-subtabs" id="settle-direction-toggle">
+        <button type="button" class="dash-stab on" onclick="setSettleIPaid(true)">Yo pago</button>
+        <button type="button" class="dash-stab" onclick="setSettleIPaid(false)">Me paga</button>
+      </div>
+    </div>
+    <div class="fld">
+      <label>Nota</label>
+      <input type="text" id="settle-note" placeholder="Opcional" maxlength="120">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-s" onclick="closeModal('settle-modal')">Cancelar</button>
+      <button class="btn-p" onclick="saveSettlement()" id="settle-save-btn">Registrar</button>
+    </div>
   </div>
 </div>
 
@@ -928,6 +1006,6 @@
 
 <div id="print-area"></div>
 
-<script src="app.js?v=20261029n"></script>
+<script src="app.js?v=20261029o"></script>
 </body>
 </html>
