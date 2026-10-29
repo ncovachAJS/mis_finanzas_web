@@ -11,7 +11,7 @@
   <script src="config.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=20261029j">
+  <link rel="stylesheet" href="styles.css?v=20261029k">
 </head>
 <body>
 
@@ -649,8 +649,9 @@
       <div class="err-msg" id="cat-name-err">Escribe un nombre</div>
     </div>
     <div class="fld">
-      <label>Icono (emoji)</label>
-      <input type="text" id="cat-icon" placeholder="🍔" maxlength="4" style="max-width:80px">
+      <label>Icono</label>
+      <input type="hidden" id="cat-icon">
+      <div class="cat-icon-picker" id="cat-icon-picker"></div>
     </div>
     <div class="fld">
       <label>Color (hex)</label>
@@ -915,6 +916,6 @@
 
 <div id="print-area"></div>
 
-<script src="app.js?v=20261029j"></script>
+<script src="app.js?v=20261029k"></script>
 </body>
 </html>

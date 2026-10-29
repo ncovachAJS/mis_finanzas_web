@@ -34,6 +34,52 @@ const FICO = {
   refresh: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
 };
 
+/* Iconos planos para categorías: el usuario elige una de estas claves en vez de
+   escribir un emoji. Las categorías antiguas con emoji guardado se siguen
+   mostrando tal cual (ver catIconMarkup) hasta que se editen y se elija un icono. */
+const CAT_ICON_SVG = {
+  food:     '<path d="M3 2v7c0 1.1.9 2 2 2a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
+  cart:     '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>',
+  home:     '<path d="M3 9l9-7 9 7"/><path d="M9 22V12h6v10"/><path d="M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10"/>',
+  car:      '<path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>',
+  bills:    '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+  bag:      '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  shirt:    '<path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 .55.45 1 1 1h10a1 1 0 0 0 1-1V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23Z"/>',
+  fun:      '<path d="m12 3-1.9 5.8a2 2 0 0 1-1.287 1.288L3 12l5.8 1.9a2 2 0 0 1 1.288 1.287L12 21l1.9-5.8a2 2 0 0 1 1.287-1.288L21 12l-5.8-1.9a2 2 0 0 1-1.288-1.287Z"/>',
+  health:   '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
+  book:     '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/>',
+  plane:    '<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-1 .1-1.3.5l-.6.7c-.5.6-.3 1.5.4 1.9L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.4.7 1.3.9 1.9.4l.7-.6c.4-.3.6-.8.5-1.3Z"/>',
+  pets:     '<circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 19.2 4.46 18.63A3.5 3.5 0 0 1 5.5 11.5Q7.2 11.24 8.4 10.5A5.013 5.013 0 0 1 9 10Z"/>',
+  tech:     '<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>',
+  coffee:   '<path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/>',
+  sport:    '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+  wallet:   '<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>',
+  family:   '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  gift:     '<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>',
+  savings:  '<line x1="3" y1="21" x2="21" y2="21"/><line x1="5" y1="21" x2="5" y2="10"/><line x1="19" y1="21" x2="19" y2="10"/><polygon points="12 3 2 9 22 9"/><line x1="9" y1="21" x2="9" y2="10"/><line x1="15" y1="21" x2="15" y2="10"/>',
+  other:    '<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42Z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+};
+const CAT_ICON_LABELS = {
+  food:'Comida', cart:'Compras', home:'Hogar', car:'Transporte', bills:'Facturas',
+  bag:'Shopping', shirt:'Ropa', fun:'Ocio', health:'Salud', book:'Educación',
+  plane:'Viajes', pets:'Mascotas', tech:'Tecnología', coffee:'Café', sport:'Deporte',
+  wallet:'Ingresos', family:'Familia', gift:'Regalos', savings:'Ahorro', other:'Otro',
+};
+function catIconSvg(key, size = 16) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${CAT_ICON_SVG[key]}</svg>`;
+}
+/** Icono de categoría para contextos HTML (span/div): SVG plano si es una clave conocida,
+    o el texto tal cual (compatibilidad con categorías antiguas guardadas con emoji). */
+function catIconMarkup(icon, size = 16) {
+  if (!icon) return '';
+  return CAT_ICON_SVG[icon] ? catIconSvg(icon, size) : esc(icon);
+}
+/** Prefijo de icono para contextos de solo texto (ej. <option>): un SVG no se puede
+    mostrar ahí, así que solo se antepone cuando es un emoji antiguo. */
+function catIconPrefix(icon) {
+  return (icon && !CAT_ICON_SVG[icon]) ? icon + ' ' : '';
+}
+
 const EXPENSE_TYPES = {
   FIXED:      { label:'Gasto fijo',    icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7"/><path d="M9 22V12h6v10"/><path d="M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10"/></svg>', color:'#6366F1' },
   VARIABLE:   { label:'Variable',      icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>', color:'#22C55E' },
@@ -1180,7 +1226,7 @@ function populateGastosFilterSelects() {
   const accSel = document.getElementById('gastos-filter-account');
   if (catSel && state.categories?.length) {
     catSel.innerHTML = '<option value="">Todas</option>' +
-      state.categories.map(c => `<option value="${c.id}">${c.icon ? c.icon + ' ' : ''}${esc(c.name)}</option>`).join('');
+      state.categories.map(c => `<option value="${c.id}">${catIconPrefix(c.icon)}${esc(c.name)}</option>`).join('');
   }
   if (accSel && state.accounts?.length) {
     accSel.innerHTML = '<option value="">Todas</option>' +
@@ -1264,9 +1310,9 @@ function renderExpenseCard(e) {
     ? `<span class="cuota-tag">Cuota ${e.cuotaNumber} de ${e.totalCuotas}</span>` : '';
   const ricoColor = e.categoryColor || '#b83030';
   const catTag = e.categoryName
-    ? `<span class="cat-tag" style="background:${ricoColor}22;color:${ricoColor};border-color:${ricoColor}55">${e.categoryIcon ? e.categoryIcon + ' ' : ''}${esc(e.categoryName)}</span>` : '';
+    ? `<span class="cat-tag" style="background:${ricoColor}22;color:${ricoColor};border-color:${ricoColor}55">${catIconMarkup(e.categoryIcon, 12)}${esc(e.categoryName)}</span>` : '';
   const tp = typePill(e.expenseType);
-  const ricoIcon  = e.categoryIcon || '🧾';
+  const ricoIcon  = catIconMarkup(e.categoryIcon, 20) || catIconSvg('other', 20);
 
   return `
     <div class="rcard" id="gasto-${e.id}">
@@ -1455,7 +1501,7 @@ function populateCategorySelect() {
   if (!sel) return;
   sel.innerHTML = '<option value="">Sin categoría</option>' +
     state.categories.map(c =>
-      `<option value="${c.id}">${c.icon ? c.icon + ' ' : ''}${esc(c.name)}</option>`
+      `<option value="${c.id}">${catIconPrefix(c.icon)}${esc(c.name)}</option>`
     ).join('');
 }
 
@@ -1476,7 +1522,7 @@ function renderCategoriesInProfile() {
     return `
     <div class="cat-card" id="cat-${c.id}">
       <div class="cat-dot" style="background:${c.color ? c.color + '22' : 'var(--surface-2)'}">
-        <span>${c.icon || '🏷️'}</span>
+        <span>${catIconMarkup(c.icon, 17) || catIconSvg('other', 17)}</span>
       </div>
       <div class="cat-info">
         <div class="cat-name">${esc(c.name)}${c.quickAdd ? ' <span title="Acceso rápido en el botón ＋" style="font-size:11px">⚡</span>' : ''}</div>
@@ -1496,6 +1542,22 @@ function renderCategoriesInProfile() {
   }).join('');
 }
 
+function renderCatIconPicker(selected) {
+  const el = document.getElementById('cat-icon-picker');
+  if (!el) return;
+  el.innerHTML = Object.keys(CAT_ICON_SVG).map(key => `
+    <button type="button" class="cat-icon-opt ${key === selected ? 'on' : ''}" onclick="selectCatIcon('${key}')" title="${CAT_ICON_LABELS[key]}">
+      ${catIconSvg(key, 18)}
+    </button>`).join('');
+}
+
+function selectCatIcon(key) {
+  document.getElementById('cat-icon').value = key;
+  document.querySelectorAll('#cat-icon-picker .cat-icon-opt').forEach(b => b.classList.remove('on'));
+  const btn = [...document.querySelectorAll('#cat-icon-picker .cat-icon-opt')].find(b => b.title === CAT_ICON_LABELS[key]);
+  if (btn) btn.classList.add('on');
+}
+
 function openCategoryModal(id) {
   state.editingCategoryId = id ?? null;
   const isEdit = !!id;
@@ -1507,11 +1569,15 @@ function openCategoryModal(id) {
   document.getElementById('cat-budget').value = '';
   document.getElementById('cat-quickadd-toggle').classList.remove('on');
   document.getElementById('cat-name-err').classList.remove('on');
+  let selectedIcon = '';
   if (isEdit) {
     const c = state.categories.find(x => x.id === id);
     if (c) {
       document.getElementById('cat-name').value  = c.name;
+      // Se conserva el valor tal cual (incluido un emoji antiguo) para no perderlo
+      // si se guarda sin tocar el icono; el grid solo resalta si es una clave conocida.
       document.getElementById('cat-icon').value  = c.icon || '';
+      selectedIcon = CAT_ICON_SVG[c.icon] ? c.icon : '';
       const color = c.color || '#1e4a58';
       document.getElementById('cat-color').value = color;
       document.getElementById('cat-color-picker').value = color;
@@ -1519,6 +1585,7 @@ function openCategoryModal(id) {
       if (c.quickAdd) document.getElementById('cat-quickadd-toggle').classList.add('on');
     }
   }
+  renderCatIconPicker(selectedIcon);
   openModal('category-modal');
 }
 
@@ -2082,7 +2149,7 @@ function renderQaCats() {
   wrap.style.display = '';
   el.innerHTML = cats.map(c => `
     <button class="qa-cat" onclick="closeQuickAdd(); openQuickExpense('${c.id}')">
-      <span class="qa-cat-ico" style="background:${c.color ? c.color + '22' : 'var(--surface-2)'}">${c.icon || '🏷️'}</span>
+      <span class="qa-cat-ico" style="background:${c.color ? c.color + '22' : 'var(--surface-2)'}">${catIconMarkup(c.icon, 19) || catIconSvg('other', 19)}</span>
       <span class="qa-cat-lbl">${esc(c.name)}</span>
     </button>`).join('');
 }
@@ -2108,7 +2175,7 @@ function openQuickExpense(categoryId) {
   if (!cat || !account) return;
   state.quickExpenseCategoryId = categoryId;
   state.quickExpenseAccountId  = account.id;
-  document.getElementById('quick-expense-title').textContent = `${cat.icon ? cat.icon + ' ' : ''}${cat.name}`;
+  document.getElementById('quick-expense-title').textContent = `${catIconPrefix(cat.icon)}${cat.name}`;
   document.getElementById('qe-amount').value = '';
   document.getElementById('qe-amount-err').classList.remove('on');
   document.getElementById('qe-account-hint').textContent = `Se añadirá a ${account.name} · ${MONTHS[state.month - 1]} ${state.year}`;
@@ -2135,7 +2202,7 @@ async function saveQuickExpense() {
       isPaid: true,
     });
     try { localStorage.setItem(`cc_qa_last_account_${_uid()}`, state.quickExpenseAccountId); } catch(e) {}
-    showToast(`${cat.icon ? cat.icon + ' ' : ''}${cat.name}: ${fmtEur(amount)} añadido`, 'success');
+    showToast(`${catIconPrefix(cat.icon)}${cat.name}: ${fmtEur(amount)} añadido`, 'success');
     closeModal('quick-expense-modal');
     await loadGastos();
     if (activeTab === 'dashboard') loadDashboard();
@@ -2240,7 +2307,7 @@ function renderBudgetsOverview() {
         const spent = state.expenses.filter(e => String(e.categoryId) === String(c.id)).reduce((s, e) => s + e.amount, 0);
         return `<div class="bud-item">
           <div class="bud-item-hdr">
-            <span class="bud-item-name">${c.icon || '🏷️'} ${esc(c.name)}</span>
+            <span class="bud-item-name">${catIconMarkup(c.icon, 14) || catIconSvg('other', 14)} ${esc(c.name)}</span>
             <button class="bud-edit-btn" onclick="showProfileTab('categorias'); openCategoryModal('${c.id}')" title="Editar">✏️</button>
           </div>
           ${_budgetBar(spent, c.budget)}
@@ -2448,7 +2515,7 @@ function renderItemDetail() {
   const acc = item.accountName || state.accounts.find(a => String(a.id) === String(item.accountId))?.name;
   const rows = [['Cuenta', acc || 'Sin cuenta']];
   if (isExpense) {
-    if (item.categoryName) rows.push(['Categoría', `${item.categoryIcon ? item.categoryIcon + ' ' : ''}${item.categoryName}`]);
+    if (item.categoryName) rows.push(['Categoría', `${catIconPrefix(item.categoryIcon)}${item.categoryName}`]);
     if (item.expenseType && EXPENSE_TYPES[item.expenseType]) rows.push(['Tipo', EXPENSE_TYPES[item.expenseType].label]);
     if (item.cuotaNumber && item.totalCuotas) rows.push(['Cuota', `${item.cuotaNumber} de ${item.totalCuotas}`]);
   }
