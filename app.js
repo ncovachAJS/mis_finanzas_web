@@ -2950,12 +2950,12 @@ async function renderShareCardImage(data) {
 
   y += 50;
   ctx.fillStyle = '#ffffff';
-  ctx.font = '400 46px "DM Serif Display"';
+  ctx.font = '700 42px "DM Sans"';
   y = _shareCardWrapText(ctx, data.name, pad, y, W - pad * 2, 54, 2);
 
   y += 70;
   ctx.fillStyle = data.amountColor;
-  ctx.font = '400 72px "DM Serif Display"';
+  ctx.font = '700 68px "DM Sans"';
   ctx.fillText(data.amountText, pad, y);
 
   y += 56;
