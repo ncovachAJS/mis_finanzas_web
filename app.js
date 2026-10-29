@@ -108,6 +108,7 @@ const state = {
   sharedGroups: [],
   sharedActiveGroupId: null,
   sharedView: 'groups',
+  editingSharedExpenseId: null,
   month: new Date().getMonth() + 1,
   year:  new Date().getFullYear(),
   dashYear: new Date().getFullYear(),
@@ -3616,6 +3617,7 @@ function sharedItemRow(it, partnerName, showGroupTag) {
         <div class="rfoot">
           <span class="spill s-pending">Te toca: ${fmtEur(it.amount / 2)}</span>
           <div class="ractions">
+            <button class="act-btn" onclick="editSharedExpense('${it.id}')">${FICO.edit} Editar</button>
             <button class="act-btn del" onclick="deleteSharedExpense('${it.id}')">${FICO.trash}</button>
           </div>
         </div>
@@ -3786,16 +3788,25 @@ function populateGroupSelect(selectId) {
   sel.value = current ?? '';
 }
 
-function openSharedExpenseModal() {
-  document.getElementById('se-desc').value = '';
-  document.getElementById('se-amount').value = '';
-  document.getElementById('se-notes').value = '';
-  document.getElementById('se-date').value = new Date().toISOString().slice(0, 10);
+function openSharedExpenseModal(editItem) {
+  state.editingSharedExpenseId = editItem ? editItem.id : null;
+  document.getElementById('shared-expense-modal-title').textContent = editItem ? 'Editar gasto compartido' : 'Nuevo gasto compartido';
+  document.getElementById('se-desc').value = editItem ? editItem.description : '';
+  document.getElementById('se-amount').value = editItem ? editItem.amount : '';
+  document.getElementById('se-notes').value = editItem?.notes ?? '';
+  document.getElementById('se-date').value = editItem ? new Date(editItem.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
   ['se-desc-err','se-amount-err'].forEach(id => document.getElementById(id).classList.remove('on'));
   document.getElementById('se-paidby-other-btn').textContent = state.sharedPartner?.name ?? 'Mi pareja';
-  setPaidByMe(true);
+  setPaidByMe(editItem ? editItem.iPaid : true);
   populateGroupSelect('se-group');
+  if (editItem) document.getElementById('se-group').value = editItem.groupId ?? '';
   openModal('shared-expense-modal');
+}
+
+function editSharedExpense(id) {
+  const it = state.sharedItems.find(x => x.id === id && x.type === 'expense');
+  if (!it) return;
+  openSharedExpenseModal(it);
 }
 
 function setPaidByMe(val) {
@@ -3809,7 +3820,7 @@ async function saveSharedExpense() {
   const amount = parseFloat(document.getElementById('se-amount').value);
   const date = document.getElementById('se-date').value || undefined;
   const notes = document.getElementById('se-notes').value.trim() || undefined;
-  const groupId = document.getElementById('se-group').value || undefined;
+  const groupId = document.getElementById('se-group').value;
   let ok = true;
   if (!description) { document.getElementById('se-desc-err').classList.add('on'); ok = false; }
   else document.getElementById('se-desc-err').classList.remove('on');
@@ -3819,8 +3830,14 @@ async function saveSharedExpense() {
   const btn = document.getElementById('se-save-btn');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
-    await api('POST', '/shared-expenses', { description, amount, paidByMe: state.sePaidByMe, date, notes, groupId });
-    showToast('Gasto compartido añadido', 'success');
+    const payload = { description, amount, paidByMe: state.sePaidByMe, date, notes, groupId };
+    if (state.editingSharedExpenseId) {
+      await api('PATCH', `/shared-expenses/${state.editingSharedExpenseId}`, payload);
+      showToast('Gasto compartido actualizado', 'success');
+    } else {
+      await api('POST', '/shared-expenses', payload);
+      showToast('Gasto compartido añadido', 'success');
+    }
     closeModal('shared-expense-modal');
     await reloadSharedCurrentView();
   } catch(e) {
