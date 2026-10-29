@@ -3508,9 +3508,7 @@ async function loadSharedExpenses() {
 }
 
 function syncPartnerNavLabel() {
-  const el = document.getElementById('tab-shared-label');
-  if (!el) return;
-  el.textContent = state.sharedPartner?.name?.split(' ')[0] || 'Split';
+  // La pestaña siempre dice "Split", vinculada o no.
 }
 
 async function openGroupsManagement() {
