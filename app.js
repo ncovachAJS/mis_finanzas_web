@@ -3510,7 +3510,7 @@ async function loadSharedExpenses() {
 function syncPartnerNavLabel() {
   const el = document.getElementById('tab-shared-label');
   if (!el) return;
-  el.textContent = state.sharedPartner?.name?.split(' ')[0] || 'Pareja';
+  el.textContent = state.sharedPartner?.name?.split(' ')[0] || 'Split';
 }
 
 async function openGroupsManagement() {
