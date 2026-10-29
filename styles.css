@@ -233,8 +233,12 @@ input[type=date]{color-scheme:light}
 .gf-clear-btn:hover{border-color:#e74c3c;color:#e74c3c}
 
 /* CARDS */
-.rcard{background:var(--surface);border:none;border-radius:16px;margin-bottom:12px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.06),0 4px 20px rgba(0,0,0,.05);transition:box-shadow .2s,transform .15s}
+.rcard{background:var(--surface);border:1.5px solid var(--border-l);border-radius:16px;margin-bottom:12px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.06),0 4px 20px rgba(0,0,0,.05);transition:box-shadow .2s,transform .15s}
 .rcard:hover{box-shadow:0 4px 16px rgba(0,0,0,.1),0 10px 32px rgba(0,0,0,.08);transform:translateY(-1px)}
+.rcard:has(.ubar.paid){background:linear-gradient(170deg,var(--income-l),var(--surface) 55%);border-color:var(--income)}
+.rcard:has(.ubar.pending){background:linear-gradient(170deg,var(--pending-l),var(--surface) 55%);border-color:var(--pending)}
+.rcard:has(.ubar.expense-paid){background:linear-gradient(170deg,var(--expense-l),var(--surface) 55%);border-color:var(--expense)}
+.rcard:has(.ubar.expense-pending){background:linear-gradient(170deg,var(--pending-l),var(--surface) 55%);border-color:var(--pending)}
 .ubar{height:3px;width:100%}
 .ubar.paid{background:var(--income)}.ubar.pending{background:var(--pending)}.ubar.expense-paid{background:var(--expense)}.ubar.expense-pending{background:var(--pending)}
 .rbody{padding:14px 18px 16px}
