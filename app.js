@@ -1545,13 +1545,59 @@ async function migrateLegacyCategoryIcons() {
   if (activeTab === 'dashboard') loadDashboard();
 }
 
+/** Selector visual de categoría (botón + hoja con icono de cada una), ya que un
+    <select> nativo no puede mostrar los iconos planos SVG en sus opciones. */
+function openCategoryPicker() {
+  renderCategoryPickerList();
+  openModal('category-picker-modal');
+}
+
+function renderCategoryPickerList() {
+  const el = document.getElementById('category-picker-list');
+  if (!el) return;
+  const current = document.getElementById('e-category')?.value || '';
+  const noneRow = `
+    <button type="button" class="cat-pick-row ${!current ? 'on' : ''}" onclick="chooseCategory('')">
+      <span class="cat-pick-ico" style="background:var(--surface-2);color:var(--muted)">${catIconSvg('other', 17)}</span>
+      <span class="cat-pick-name">Sin categoría</span>
+    </button>`;
+  const rows = state.categories.map(c => `
+    <button type="button" class="cat-pick-row ${String(c.id) === String(current) ? 'on' : ''}" onclick="chooseCategory('${c.id}')">
+      <span class="cat-pick-ico" style="background:${c.color ? c.color + '22' : 'var(--surface-2)'};color:${c.color || 'var(--muted)'}">${catIconMarkup(c.icon, 17) || catIconSvg('other', 17)}</span>
+      <span class="cat-pick-name">${esc(c.name)}</span>
+    </button>`).join('');
+  el.innerHTML = noneRow + rows;
+}
+
+function chooseCategory(id) {
+  document.getElementById('e-category').value = id;
+  syncCategoryPickerButton();
+  closeModal('category-picker-modal');
+}
+
+function syncCategoryPickerButton() {
+  const id = document.getElementById('e-category')?.value;
+  const btnIco   = document.getElementById('e-category-btn-ico');
+  const btnLabel = document.getElementById('e-category-btn-label');
+  if (!btnIco || !btnLabel) return;
+  const c = id ? state.categories.find(x => String(x.id) === String(id)) : null;
+  if (c) {
+    btnIco.style.background = c.color ? c.color + '22' : 'var(--surface-2)';
+    btnIco.style.color      = c.color || 'var(--muted)';
+    btnIco.innerHTML = catIconMarkup(c.icon, 16) || catIconSvg('other', 16);
+    btnLabel.textContent = c.name;
+  } else {
+    btnIco.style.background = 'var(--surface-2)';
+    btnIco.style.color      = 'var(--muted)';
+    btnIco.innerHTML = catIconSvg('other', 16);
+    btnLabel.textContent = 'Sin categoría';
+  }
+}
+
 function populateCategorySelect() {
-  const sel = document.getElementById('e-category');
-  if (!sel) return;
-  sel.innerHTML = '<option value="">Sin categoría</option>' +
-    state.categories.map(c =>
-      `<option value="${c.id}">${catIconPrefix(c.icon)}${esc(c.name)}</option>`
-    ).join('');
+  if (!document.getElementById('e-category')) return;
+  renderCategoryPickerList();
+  syncCategoryPickerButton();
 }
 
 function renderCategoriesInProfile() {
@@ -2845,6 +2891,7 @@ function openExpenseModal(id) {
     }
   }
   resetRepeatField('e', isEdit);
+  syncCategoryPickerButton();
   openModal('expense-modal');
 }
 
@@ -2860,6 +2907,7 @@ function duplicateExpense(id) {
   document.getElementById('e-category').value = exp.categoryId ?? '';
   document.getElementById('e-type').value     = exp.expenseType ?? '';
   onExpenseTypeChange();
+  syncCategoryPickerButton();
   document.getElementById('expense-modal-title').textContent = 'Duplicar gasto';
   document.getElementById('e-amount').focus();
   document.getElementById('e-amount').select();

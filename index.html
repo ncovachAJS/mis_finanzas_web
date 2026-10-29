@@ -11,7 +11,7 @@
   <script src="config.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=20261029m">
+  <link rel="stylesheet" href="styles.css?v=20261029n">
 </head>
 <body>
 
@@ -440,9 +440,12 @@
     </div>
     <div class="fld">
       <label>Categoría</label>
-      <select id="e-category">
-        <option value="">Sin categoría</option>
-      </select>
+      <input type="hidden" id="e-category">
+      <button type="button" class="cat-select-btn" id="e-category-btn" onclick="openCategoryPicker()">
+        <span class="cat-select-ico" id="e-category-btn-ico"></span>
+        <span class="cat-select-label" id="e-category-btn-label">Sin categoría</span>
+        <span class="cat-select-chevron">▾</span>
+      </button>
     </div>
 
     <div class="slbl">Asignación</div>
@@ -635,6 +638,15 @@
       <button class="btn-s" onclick="closeModal('add-savings-modal')">Cancelar</button>
       <button class="btn-p" onclick="saveAddSavings()" id="as-save-btn">Añadir</button>
     </div>
+  </div>
+</div>
+
+<!-- Modal selector de categoría (para el formulario de gasto) -->
+<div class="modal" id="category-picker-modal">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Elige una categoría</div>
+    <div class="cat-pick-list" id="category-picker-list"></div>
   </div>
 </div>
 
@@ -916,6 +928,6 @@
 
 <div id="print-area"></div>
 
-<script src="app.js?v=20261029m"></script>
+<script src="app.js?v=20261029n"></script>
 </body>
 </html>
