@@ -22,14 +22,26 @@ const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
 const MONTHS_SHORT = ['Ene','Feb','Mar','Abr','May','Jun',
   'Jul','Ago','Sep','Oct','Nov','Dic'];
 
+/* Iconos planos (línea, sin relleno) usados en botones de acción y tipos de gasto,
+   en vez de emoji, para que combinen con el resto del diseño. */
+const FICO = {
+  edit:    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  copy:    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  share:   '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>',
+  trash:   '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
+  check:   '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  undo:    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 7"/></svg>',
+  refresh: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
+};
+
 const EXPENSE_TYPES = {
-  FIXED:      { label:'Gasto fijo',    icon:'🏠', color:'#6366F1' },
-  VARIABLE:   { label:'Variable',      icon:'🛒', color:'#22C55E' },
-  DEBT:       { label:'Deuda',         icon:'💳', color:'#EF4444' },
-  DONATION:   { label:'Donación',      icon:'🎁', color:'#EC4899' },
-  INVESTMENT: { label:'Inversión',     icon:'📈', color:'#3B82F6' },
-  SAVINGS:    { label:'Ahorro',        icon:'🏦', color:'#10B981' },
-  OTHER:      { label:'Otro',          icon:'📦', color:'#6B7280' },
+  FIXED:      { label:'Gasto fijo',    icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7"/><path d="M9 22V12h6v10"/><path d="M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10"/></svg>', color:'#6366F1' },
+  VARIABLE:   { label:'Variable',      icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>', color:'#22C55E' },
+  DEBT:       { label:'Deuda',         icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>', color:'#EF4444' },
+  DONATION:   { label:'Donación',      icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>', color:'#EC4899' },
+  INVESTMENT: { label:'Inversión',     icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>', color:'#3B82F6' },
+  SAVINGS:    { label:'Ahorro',        icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="21" x2="21" y2="21"/><line x1="5" y1="21" x2="5" y2="10"/><line x1="19" y1="21" x2="19" y2="10"/><polygon points="12 3 2 9 22 9"/><line x1="9" y1="21" x2="9" y2="10"/><line x1="15" y1="21" x2="15" y2="10"/></svg>', color:'#10B981' },
+  OTHER:      { label:'Otro',          icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg>', color:'#6B7280' },
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -204,7 +216,7 @@ function typePill(expenseType) {
   if (!expenseType || expenseType === 'OTHER') return '';
   const t = EXPENSE_TYPES[expenseType];
   if (!t) return '';
-  return `<span class="type-tag" style="color:${t.color};border-color:${t.color};background:${t.color}18">${t.icon} ${t.label}</span>`;
+  return `<span class="type-tag" style="color:${t.color};border-color:${t.color};background:${t.color}18">${t.icon}${t.label}</span>`;
 }
 
 function ldg() {
@@ -1274,12 +1286,12 @@ function renderExpenseCard(e) {
           <span class="spill ${e.isPaid ? 's-paid' : 's-pending'}">${e.isPaid ? 'Pagado' : 'Pendiente'}</span>
           <div class="ractions">
             <button class="act-btn paid-toggle ${e.isPaid ? 'is-paid' : ''}" onclick="toggleExpensePaid('${e.id}',${e.isPaid})">
-              ${e.isPaid ? '↩ Pendiente' : '✓ Pagado'}
+              ${e.isPaid ? FICO.undo + 'Pendiente' : FICO.check + 'Pagado'}
             </button>
-            <button class="act-btn" onclick="openExpenseModal('${e.id}')">✏️ Editar</button>
-            <button class="act-btn" onclick="duplicateExpense('${e.id}')" title="Duplicar">📋</button>
-            <button class="act-btn" onclick="shareExpense('${e.id}')" title="Compartir">📤</button>
-            <button class="act-btn del" onclick="askDeleteExpense('${e.id}')">🗑</button>
+            <button class="act-btn" onclick="openExpenseModal('${e.id}')">${FICO.edit}Editar</button>
+            <button class="act-btn" onclick="duplicateExpense('${e.id}')" title="Duplicar">${FICO.copy}</button>
+            <button class="act-btn" onclick="shareExpense('${e.id}')" title="Compartir">${FICO.share}</button>
+            <button class="act-btn del" onclick="askDeleteExpense('${e.id}')">${FICO.trash}</button>
           </div>
         </div>
       </div>
@@ -1362,12 +1374,12 @@ function renderIngresos() {
           <span class="spill ${i.isPaid ? 's-paid' : 's-pending'}">${i.isPaid ? 'Cobrado' : 'Pendiente'}</span>
           <div class="ractions">
             <button class="act-btn paid-toggle ${i.isPaid ? 'is-paid' : ''}" onclick="toggleIncomePaid('${i.id}',${i.isPaid})">
-              ${i.isPaid ? '↩ Pendiente' : '✓ Cobrado'}
+              ${i.isPaid ? FICO.undo + 'Pendiente' : FICO.check + 'Cobrado'}
             </button>
-            <button class="act-btn" onclick="openIncomeModal('${i.id}')">✏️ Editar</button>
-            <button class="act-btn" onclick="duplicateIncome('${i.id}')" title="Duplicar">📋</button>
-            <button class="act-btn" onclick="shareIncome('${i.id}')" title="Compartir">📤</button>
-            <button class="act-btn del" onclick="askDeleteIncome('${i.id}')">🗑</button>
+            <button class="act-btn" onclick="openIncomeModal('${i.id}')">${FICO.edit}Editar</button>
+            <button class="act-btn" onclick="duplicateIncome('${i.id}')" title="Duplicar">${FICO.copy}</button>
+            <button class="act-btn" onclick="shareIncome('${i.id}')" title="Compartir">${FICO.share}</button>
+            <button class="act-btn del" onclick="askDeleteIncome('${i.id}')">${FICO.trash}</button>
           </div>
         </div>
       </div>
@@ -1414,7 +1426,7 @@ function renderAccounts() {
       </div>
       <div class="account-actions">
         <button class="btn-s" style="padding:5px 10px;font-size:12px" onclick="openAccountModal('${a.id}')">✏️</button>
-        <button class="btn-danger" style="padding:5px 10px;font-size:12px" onclick="askDeleteAccount('${a.id}')">🗑</button>
+        <button class="btn-danger" style="padding:5px 10px;font-size:12px" onclick="askDeleteAccount('${a.id}')">${FICO.trash}</button>
       </div>
     </div>`).join('');
 }
@@ -1478,7 +1490,7 @@ function renderCategoriesInProfile() {
       </div>
       <div class="cat-actions">
         <button class="btn-s" style="padding:4px 9px;font-size:12px" onclick="openCategoryModal('${c.id}')">✏️</button>
-        <button class="btn-danger" style="padding:4px 9px;font-size:12px" onclick="askDeleteCategory('${c.id}')">🗑</button>
+        <button class="btn-danger" style="padding:4px 9px;font-size:12px" onclick="askDeleteCategory('${c.id}')">${FICO.trash}</button>
       </div>
     </div>`;
   }).join('');
@@ -1596,8 +1608,8 @@ function renderSavingsGoals() {
         ${deadline ? `<div class="goal-deadline">📅 Fecha límite: ${deadline}</div>` : ''}
         <div class="goal-actions" style="margin-top:10px">
           <button class="btn-s" style="padding:4px 10px;font-size:12px" onclick="openAddSavingsModal('${g.id}','${esc(g.name)}')">+ Añadir</button>
-          <button class="btn-s" style="padding:4px 10px;font-size:12px" onclick="openGoalModal('${g.id}')">✏️ Editar</button>
-          <button class="btn-danger" style="padding:4px 10px;font-size:12px" onclick="askDeleteGoal('${g.id}')">🗑</button>
+          <button class="btn-s" style="padding:4px 10px;font-size:12px" onclick="openGoalModal('${g.id}')">${FICO.edit}Editar</button>
+          <button class="btn-danger" style="padding:4px 10px;font-size:12px" onclick="askDeleteGoal('${g.id}')">${FICO.trash}</button>
         </div>
       </div>`;
   }).join('');
@@ -1949,7 +1961,7 @@ function renderInvestmentDetail(inv) {
 
     <div class="modal-btns" style="margin-top:20px">
       <button class="btn-danger" onclick="askDeleteInvestment('${inv.id}')">🗑 Eliminar</button>
-      <button class="btn-s" onclick="openInvestmentModal('${inv.id}')">✏️ Editar</button>
+      <button class="btn-s" onclick="openInvestmentModal('${inv.id}')">${FICO.edit}Editar</button>
       <button class="btn-p" onclick="closeModal('investment-detail-modal')">Cerrar</button>
     </div>`;
 
@@ -2390,8 +2402,8 @@ async function renderReceiptArea(expenseId) {
         <img src="${url}" class="receipt-thumb" onclick="viewReceiptFullscreen('${url}')">
       </div>
       <div class="receipt-thumb-actions">
-        <button class="act-btn" style="flex:1" onclick="pickReceiptPhoto('${expenseId}')">🔄 Cambiar</button>
-        <button class="act-btn del" style="flex:1" onclick="removeReceiptPhoto('${expenseId}')">🗑 Quitar</button>
+        <button class="act-btn" style="flex:1" onclick="pickReceiptPhoto('${expenseId}')">${FICO.refresh}Cambiar</button>
+        <button class="act-btn del" style="flex:1" onclick="removeReceiptPhoto('${expenseId}')">${FICO.trash}Quitar</button>
       </div>`;
   } else {
     area.innerHTML = `
@@ -2458,12 +2470,12 @@ function renderItemDetail() {
       </div>` : ''}
     <div class="ractions" style="margin-top:18px;flex-wrap:wrap">
       <button class="act-btn paid-toggle ${item.isPaid ? 'is-paid' : ''}" onclick="toggleDetailPaid()">
-        ${item.isPaid ? '↩ Pendiente' : (isExpense ? '✓ Pagado' : '✓ Cobrado')}
+        ${item.isPaid ? FICO.undo + 'Pendiente' : (isExpense ? FICO.check + 'Pagado' : FICO.check + 'Cobrado')}
       </button>
-      <button class="act-btn" onclick="closeModal('item-detail-modal'); ${isExpense ? 'openExpenseModal' : 'openIncomeModal'}('${item.id}')">✏️ Editar</button>
-      <button class="act-btn" onclick="closeModal('item-detail-modal'); ${isExpense ? 'duplicateExpense' : 'duplicateIncome'}('${item.id}')" title="Duplicar">📋</button>
-      <button class="act-btn" onclick="${isExpense ? 'shareExpense' : 'shareIncome'}('${item.id}')" title="Compartir">📤</button>
-      <button class="act-btn del" onclick="closeModal('item-detail-modal'); ${isExpense ? 'askDeleteExpense' : 'askDeleteIncome'}('${item.id}')">🗑</button>
+      <button class="act-btn" onclick="closeModal('item-detail-modal'); ${isExpense ? 'openExpenseModal' : 'openIncomeModal'}('${item.id}')">${FICO.edit}Editar</button>
+      <button class="act-btn" onclick="closeModal('item-detail-modal'); ${isExpense ? 'duplicateExpense' : 'duplicateIncome'}('${item.id}')" title="Duplicar">${FICO.copy}</button>
+      <button class="act-btn" onclick="${isExpense ? 'shareExpense' : 'shareIncome'}('${item.id}')" title="Compartir">${FICO.share}</button>
+      <button class="act-btn del" onclick="closeModal('item-detail-modal'); ${isExpense ? 'askDeleteExpense' : 'askDeleteIncome'}('${item.id}')">${FICO.trash}</button>
     </div>
   `;
 
