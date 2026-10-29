@@ -11,7 +11,7 @@
   <script src="config.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=20261029p">
+  <link rel="stylesheet" href="styles.css?v=20261029q">
 </head>
 <body>
 
@@ -686,6 +686,10 @@
       </div>
     </div>
     <div class="fld">
+      <label>Grupo</label>
+      <select id="se-group"></select>
+    </div>
+    <div class="fld">
       <label>Fecha</label>
       <input type="date" id="se-date">
     </div>
@@ -733,6 +737,10 @@
         <button type="button" class="dash-stab on" onclick="setSettleIPaid(true)">Yo pago</button>
         <button type="button" class="dash-stab" onclick="setSettleIPaid(false)">Me paga</button>
       </div>
+    </div>
+    <div class="fld">
+      <label>Grupo</label>
+      <select id="settle-group"></select>
     </div>
     <div class="fld">
       <label>Nota</label>
@@ -1023,6 +1031,6 @@
 
 <div id="print-area"></div>
 
-<script src="app.js?v=20261029p"></script>
+<script src="app.js?v=20261029q"></script>
 </body>
 </html>

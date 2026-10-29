@@ -3489,11 +3489,18 @@ async function loadSharedExpenses() {
     state.sharedLinked = !!p.linked;
     state.sharedPartner = p.partner;
     syncPartnerNavLabel();
-    if (!state.sharedLinked) { state.sharedView = 'groups'; renderSharedView(); return; }
-    const data = await api('GET', '/shared-groups');
-    if (data === null) return;
-    state.sharedGroups = data.groups ?? [];
-    state.sharedView = 'groups';
+    state.sharedView = 'overview';
+    if (!state.sharedLinked) { renderSharedView(); return; }
+    const [feed, groupsData] = await Promise.all([
+      api('GET', '/shared-expenses'),
+      api('GET', '/shared-groups'),
+    ]);
+    if (feed === null || groupsData === null) return;
+    state.sharedBalance = feed.balance;
+    state.sharedItems = feed.items ?? [];
+    state.sharedPartner = feed.partner ?? state.sharedPartner;
+    state.sharedGroups = groupsData.groups ?? [];
+    syncPartnerNavLabel();
     renderSharedView();
   } catch(e) {
     el.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><h3>Error</h3><p>${e.message}</p></div>`;
@@ -3504,6 +3511,20 @@ function syncPartnerNavLabel() {
   const el = document.getElementById('tab-shared-label');
   if (!el) return;
   el.textContent = state.sharedPartner?.name?.split(' ')[0] || 'Pareja';
+}
+
+async function openGroupsManagement() {
+  const el = document.getElementById('shared-content');
+  el.innerHTML = ldg();
+  state.sharedView = 'groups';
+  try {
+    const data = await api('GET', '/shared-groups');
+    if (data === null) return;
+    state.sharedGroups = data.groups ?? [];
+    renderSharedView();
+  } catch(e) {
+    el.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><h3>Error</h3><p>${e.message}</p></div>`;
+  }
 }
 
 async function openSharedGroup(groupId) {
@@ -3545,13 +3566,101 @@ function renderSharedView() {
   }
 
   if (state.sharedView === 'groups') { renderSharedGroupsList(); return; }
-  renderSharedFeed();
+  if (state.sharedView === 'feed') { renderSharedFeed(); return; }
+  renderSharedOverview();
 }
 
 function balancePill(balance) {
   if (balance > 0.004) return `<span class="spill s-paid">+${fmtEur(balance)}</span>`;
   if (balance < -0.004) return `<span class="spill s-pending">−${fmtEur(Math.abs(balance))}</span>`;
   return `<span class="spill" style="background:var(--surface-2);color:var(--muted)">En paz</span>`;
+}
+
+function sharedItemRow(it, partnerName, showGroupTag) {
+  if (it.type === 'settlement') {
+    const who = it.iPaid ? `Pagaste a ${esc(partnerName)}` : `${esc(partnerName)} te pagó`;
+    return `
+      <div class="rcard">
+        <div class="ubar ${it.iPaid ? 'expense-paid' : 'paid'}"></div>
+        <div class="rbody">
+          <div class="rmeta">
+            <div class="rico" style="background:#2563eb2e;color:#2563eb">${catIconSvg('wallet', 20)}</div>
+            <div class="rmeta-main">
+              <div class="rcat">${fmtDate(it.date)} · Pago${showGroupTag && it.groupName ? ' · ' + esc(it.groupName) : ''}</div>
+              <div class="rtitle">${who}</div>
+              ${it.note ? `<div class="rnotes">${esc(it.note)}</div>` : ''}
+            </div>
+            <div class="ramount ${it.iPaid ? 'expense' : 'income'}">${it.iPaid ? '− ' : '+ '}${fmtEur(it.amount)}</div>
+          </div>
+          <div class="rfoot">
+            <span></span>
+            <div class="ractions">
+              <button class="act-btn del" onclick="deleteSettlement('${it.id}')">${FICO.trash}</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+  const who = it.iPaid ? 'Pagaste tú' : `Pagó ${esc(partnerName)}`;
+  return `
+    <div class="rcard">
+      <div class="ubar ${it.iPaid ? 'expense-paid' : 'paid'}"></div>
+      <div class="rbody">
+        <div class="rmeta">
+          <div class="rico" style="background:${it.iPaid ? '#b8303022' : '#2b7d5422'};color:${it.iPaid ? '#b83030' : '#2b7d54'}">${catIconSvg('cart', 20)}</div>
+          <div class="rmeta-main">
+            <div class="rcat">${fmtDate(it.date)} · ${who}${showGroupTag && it.groupName ? ' · ' + esc(it.groupName) : ''}</div>
+            <div class="rtitle">${esc(it.description)}</div>
+            ${it.notes ? `<div class="rnotes">${esc(it.notes)}</div>` : ''}
+          </div>
+          <div class="ramount">${fmtEur(it.amount)}</div>
+        </div>
+        <div class="rfoot">
+          <span class="spill s-pending">Te toca: ${fmtEur(it.amount / 2)}</span>
+          <div class="ractions">
+            <button class="act-btn del" onclick="deleteSharedExpense('${it.id}')">${FICO.trash}</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderSharedOverview() {
+  const el = document.getElementById('shared-content');
+  const bal = state.sharedBalance;
+  const abs = fmtEur(Math.abs(bal));
+  const partnerName = state.sharedPartner?.name ?? 'tu pareja';
+  const heroClass = bal < -0.004 ? 'neg' : '';
+  const heroText = bal > 0.004 ? `${partnerName} te debe` : bal < -0.004 ? `Le debes a ${partnerName}` : 'Estáis en paz';
+
+  const breakdownLines = state.sharedGroups
+    .filter(g => Math.abs(g.balance) > 0.004)
+    .map(g => {
+      const line = g.balance > 0
+        ? `${esc(partnerName)} te debe ${fmtEur(g.balance)} en "${esc(g.name)}"`
+        : `Debes a ${esc(partnerName)} ${fmtEur(Math.abs(g.balance))} en "${esc(g.name)}"`;
+      return `<div style="cursor:pointer;font-size:13px;font-weight:500;color:#fff;display:flex;align-items:center;gap:8px" onclick="openSharedGroup(${g.id ? `'${g.id}'` : 'null'})">
+        <span style="color:${g.balance > 0 ? '#86eab8' : '#ffa6a6'}">●</span> ${line}
+      </div>`;
+    }).join('');
+
+  const itemsHtml = state.sharedItems.length === 0
+    ? `<div class="empty" style="padding:28px 16px"><div class="empty-ico">🤝</div><h3>Sin movimientos</h3><p>Añade el primer gasto compartido.</p></div>`
+    : state.sharedItems.map(it => sharedItemRow(it, partnerName, true)).join('');
+
+  el.innerHTML = `
+    <div class="balance-hero ${heroClass}">
+      <div class="balance-hero-label">${heroText}</div>
+      <div class="balance-hero-amount">${bal === 0 ? '0,00 €' : abs}</div>
+      ${breakdownLines ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.18);display:flex;flex-direction:column;gap:6px">${breakdownLines}</div>` : `<div class="balance-hero-sub">Compartido con ${esc(partnerName)}</div>`}
+    </div>
+    <div class="ractions" style="margin-bottom:10px">
+      <button class="btn-p" style="flex:1;margin-top:0" onclick="openSharedExpenseModal()">＋ Gasto compartido</button>
+      <button class="btn-s" onclick="openSettleModal()">Registrar pago</button>
+    </div>
+    <button class="btn-s" style="width:100%;margin-bottom:18px;justify-content:center" onclick="openGroupsManagement()">${catIconSvg('plane', 15)} Grupos (${state.sharedGroups.filter(g => g.id).length})</button>
+    ${itemsHtml}
+  `;
 }
 
 function renderSharedGroupsList() {
@@ -3571,6 +3680,7 @@ function renderSharedGroupsList() {
   }).join('');
 
   el.innerHTML = `
+    <button class="btn-s" onclick="loadSharedExpenses()" style="margin-bottom:12px">${FICO.undo} Volver</button>
     <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Compartido con ${esc(partnerName)}. Organiza los gastos en grupos (ej. un viaje) o usa "General" para el día a día.</p>
     ${rows}
     <button class="add-btn" style="width:100%;justify-content:center;margin-top:6px" onclick="openNewGroupModal()">＋ Nuevo grupo</button>
@@ -3590,57 +3700,10 @@ function renderSharedFeed() {
 
   const itemsHtml = state.sharedItems.length === 0
     ? `<div class="empty" style="padding:28px 16px"><div class="empty-ico">🤝</div><h3>Sin movimientos</h3><p>Añade el primer gasto compartido.</p></div>`
-    : state.sharedItems.map(it => {
-        if (it.type === 'settlement') {
-          const who = it.iPaid ? `Pagaste a ${esc(partnerName)}` : `${esc(partnerName)} te pagó`;
-          return `
-            <div class="rcard">
-              <div class="ubar ${it.iPaid ? 'expense-paid' : 'paid'}"></div>
-              <div class="rbody">
-                <div class="rmeta">
-                  <div class="rico" style="background:#2563eb2e;color:#2563eb">${catIconSvg('wallet', 20)}</div>
-                  <div class="rmeta-main">
-                    <div class="rcat">${fmtDate(it.date)} · Pago</div>
-                    <div class="rtitle">${who}</div>
-                    ${it.note ? `<div class="rnotes">${esc(it.note)}</div>` : ''}
-                  </div>
-                  <div class="ramount ${it.iPaid ? 'expense' : 'income'}">${it.iPaid ? '− ' : '+ '}${fmtEur(it.amount)}</div>
-                </div>
-                <div class="rfoot">
-                  <span></span>
-                  <div class="ractions">
-                    <button class="act-btn del" onclick="deleteSettlement('${it.id}')">${FICO.trash}</button>
-                  </div>
-                </div>
-              </div>
-            </div>`;
-        }
-        const who = it.iPaid ? 'Pagaste tú' : `Pagó ${esc(partnerName)}`;
-        return `
-          <div class="rcard">
-            <div class="ubar ${it.iPaid ? 'expense-paid' : 'paid'}"></div>
-            <div class="rbody">
-              <div class="rmeta">
-                <div class="rico" style="background:${it.iPaid ? '#b8303022' : '#2b7d5422'};color:${it.iPaid ? '#b83030' : '#2b7d54'}">${catIconSvg('cart', 20)}</div>
-                <div class="rmeta-main">
-                  <div class="rcat">${fmtDate(it.date)} · ${who}</div>
-                  <div class="rtitle">${esc(it.description)}</div>
-                  ${it.notes ? `<div class="rnotes">${esc(it.notes)}</div>` : ''}
-                </div>
-                <div class="ramount">${fmtEur(it.amount)}</div>
-              </div>
-              <div class="rfoot">
-                <span class="spill s-pending">Te toca: ${fmtEur(it.amount / 2)}</span>
-                <div class="ractions">
-                  <button class="act-btn del" onclick="deleteSharedExpense('${it.id}')">${FICO.trash}</button>
-                </div>
-              </div>
-            </div>
-          </div>`;
-      }).join('');
+    : state.sharedItems.map(it => sharedItemRow(it, partnerName, false)).join('');
 
   el.innerHTML = `
-    <button class="btn-s" onclick="loadSharedExpenses()" style="margin-bottom:12px">${FICO.undo} Grupos</button>
+    <button class="btn-s" onclick="loadSharedExpenses()" style="margin-bottom:12px">${FICO.undo} Volver</button>
     <div class="balance-hero ${heroClass}">
       <div class="balance-hero-label">${heroText}</div>
       <div class="balance-hero-amount">${bal === 0 ? '0,00 €' : abs}</div>
@@ -3700,7 +3763,7 @@ async function saveSharedGroup() {
     await api('POST', '/shared-groups', { name });
     showToast('Grupo creado', 'success');
     closeModal('group-modal');
-    await loadSharedExpenses();
+    await openGroupsManagement();
   } catch(e) {
     showToast(e.message || 'Error al crear el grupo', 'error');
   } finally { btn.disabled = false; btn.textContent = 'Crear'; }
@@ -3711,8 +3774,18 @@ async function deleteSharedGroup(id) {
   try {
     await api('DELETE', `/shared-groups/${id}`);
     showToast('Grupo eliminado');
-    await loadSharedExpenses();
+    await openGroupsManagement();
   } catch(e) { showToast(e.message, 'error'); }
+}
+
+function populateGroupSelect(selectId) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  const current = state.sharedView === 'feed' ? state.sharedActiveGroupId : null;
+  sel.innerHTML = state.sharedGroups.map(g =>
+    `<option value="${g.id ?? ''}">${esc(g.name)}</option>`
+  ).join('');
+  sel.value = current ?? '';
 }
 
 function openSharedExpenseModal() {
@@ -3722,6 +3795,7 @@ function openSharedExpenseModal() {
   document.getElementById('se-date').value = new Date().toISOString().slice(0, 10);
   ['se-desc-err','se-amount-err'].forEach(id => document.getElementById(id).classList.remove('on'));
   setPaidByMe(true);
+  populateGroupSelect('se-group');
   openModal('shared-expense-modal');
 }
 
@@ -3736,6 +3810,7 @@ async function saveSharedExpense() {
   const amount = parseFloat(document.getElementById('se-amount').value);
   const date = document.getElementById('se-date').value || undefined;
   const notes = document.getElementById('se-notes').value.trim() || undefined;
+  const groupId = document.getElementById('se-group').value || undefined;
   let ok = true;
   if (!description) { document.getElementById('se-desc-err').classList.add('on'); ok = false; }
   else document.getElementById('se-desc-err').classList.remove('on');
@@ -3745,10 +3820,10 @@ async function saveSharedExpense() {
   const btn = document.getElementById('se-save-btn');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
-    await api('POST', '/shared-expenses', { description, amount, paidByMe: state.sePaidByMe, date, notes, groupId: state.sharedActiveGroupId || undefined });
+    await api('POST', '/shared-expenses', { description, amount, paidByMe: state.sePaidByMe, date, notes, groupId });
     showToast('Gasto compartido añadido', 'success');
     closeModal('shared-expense-modal');
-    await openSharedGroup(state.sharedActiveGroupId);
+    await reloadSharedCurrentView();
   } catch(e) {
     showToast(e.message || 'Error al guardar', 'error');
   } finally { btn.disabled = false; btn.textContent = 'Guardar'; }
@@ -3759,7 +3834,7 @@ async function deleteSharedExpense(id) {
   try {
     await api('DELETE', `/shared-expenses/${id}`);
     showToast('Gasto eliminado');
-    await openSharedGroup(state.sharedActiveGroupId);
+    await reloadSharedCurrentView();
   } catch(e) { showToast(e.message, 'error'); }
 }
 
@@ -3768,6 +3843,7 @@ function openSettleModal() {
   document.getElementById('settle-note').value = '';
   document.getElementById('settle-amount-err').classList.remove('on');
   setSettleIPaid(state.sharedBalance < 0);
+  populateGroupSelect('settle-group');
   openModal('settle-modal');
 }
 
@@ -3780,15 +3856,16 @@ function setSettleIPaid(val) {
 async function saveSettlement() {
   const amount = parseFloat(document.getElementById('settle-amount').value);
   const note = document.getElementById('settle-note').value.trim() || undefined;
+  const groupId = document.getElementById('settle-group').value || undefined;
   if (isNaN(amount) || amount <= 0) { document.getElementById('settle-amount-err').classList.add('on'); return; }
   document.getElementById('settle-amount-err').classList.remove('on');
   const btn = document.getElementById('settle-save-btn');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
-    await api('POST', '/shared-expenses/settle', { amount, iPaid: state.settleIPaid, note, groupId: state.sharedActiveGroupId || undefined });
+    await api('POST', '/shared-expenses/settle', { amount, iPaid: state.settleIPaid, note, groupId });
     showToast('Pago registrado', 'success');
     closeModal('settle-modal');
-    await openSharedGroup(state.sharedActiveGroupId);
+    await reloadSharedCurrentView();
   } catch(e) {
     showToast(e.message || 'Error al guardar', 'error');
   } finally { btn.disabled = false; btn.textContent = 'Registrar'; }
@@ -3799,11 +3876,15 @@ async function deleteSettlement(id) {
   try {
     await api('DELETE', `/shared-expenses/settle/${id}`);
     showToast('Pago eliminado');
-    await openSharedGroup(state.sharedActiveGroupId);
+    await reloadSharedCurrentView();
   } catch(e) { showToast(e.message, 'error'); }
 }
 
-/* ═══════════════════════════════════════════════════════════
+function reloadSharedCurrentView() {
+  if (state.sharedView === 'feed') return openSharedGroup(state.sharedActiveGroupId);
+  return loadSharedExpenses();
+}
+
 /* ═══════════════════════════════════════════════════════════
    CLOSE MODAL ON BACKDROP CLICK
 ════════════════════════════════════════════════════════════════ */
