@@ -11,7 +11,7 @@
   <script src="config.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=20261029w">
+  <link rel="stylesheet" href="styles.css?v=20261029x">
 </head>
 <body>
 
@@ -683,7 +683,7 @@
       <label>¿Quién lo pagó?</label>
       <div class="dash-subtabs" id="se-paidby-toggle">
         <button type="button" class="dash-stab on" onclick="setPaidByMe(true)">Yo</button>
-        <button type="button" class="dash-stab" onclick="setPaidByMe(false)">Mi pareja</button>
+        <button type="button" class="dash-stab" id="se-paidby-other-btn" onclick="setPaidByMe(false)">Mi pareja</button>
       </div>
     </div>
     <div class="fld">
@@ -736,7 +736,7 @@
       <label>¿Quién paga a quién?</label>
       <div class="dash-subtabs" id="settle-direction-toggle">
         <button type="button" class="dash-stab on" onclick="setSettleIPaid(true)">Yo pago</button>
-        <button type="button" class="dash-stab" onclick="setSettleIPaid(false)">Me paga</button>
+        <button type="button" class="dash-stab" id="settle-other-btn" onclick="setSettleIPaid(false)">Me paga</button>
       </div>
     </div>
     <div class="fld">
@@ -1032,6 +1032,6 @@
 
 <div id="print-area"></div>
 
-<script src="app.js?v=20261029w"></script>
+<script src="app.js?v=20261029x"></script>
 </body>
 </html>

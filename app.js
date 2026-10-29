@@ -3792,6 +3792,7 @@ function openSharedExpenseModal() {
   document.getElementById('se-notes').value = '';
   document.getElementById('se-date').value = new Date().toISOString().slice(0, 10);
   ['se-desc-err','se-amount-err'].forEach(id => document.getElementById(id).classList.remove('on'));
+  document.getElementById('se-paidby-other-btn').textContent = state.sharedPartner?.name ?? 'Mi pareja';
   setPaidByMe(true);
   populateGroupSelect('se-group');
   openModal('shared-expense-modal');
@@ -3840,6 +3841,7 @@ function openSettleModal() {
   document.getElementById('settle-amount').value = Math.abs(state.sharedBalance) > 0.004 ? Math.abs(state.sharedBalance).toFixed(2) : '';
   document.getElementById('settle-note').value = '';
   document.getElementById('settle-amount-err').classList.remove('on');
+  document.getElementById('settle-other-btn').textContent = state.sharedPartner?.name ? `${state.sharedPartner.name} paga` : 'Me paga';
   setSettleIPaid(state.sharedBalance < 0);
   populateGroupSelect('settle-group');
   openModal('settle-modal');
