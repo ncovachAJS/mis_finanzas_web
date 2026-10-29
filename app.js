@@ -105,6 +105,9 @@ const state = {
   sharedPartner: null,
   sharedBalance: 0,
   sharedItems: [],
+  sharedGroups: [],
+  sharedActiveGroupId: null,
+  sharedView: 'groups',
   month: new Date().getMonth() + 1,
   year:  new Date().getFullYear(),
   dashYear: new Date().getFullYear(),
@@ -611,6 +614,9 @@ async function startApp() {
   applyUserTheme();
   const nameEl = document.getElementById('hdr-user');
   if (nameEl) nameEl.textContent = state.user?.name?.split(' ')[0] ?? '';
+  api('GET', '/partner').then(p => {
+    if (p?.linked) { state.sharedLinked = true; state.sharedPartner = p.partner; syncPartnerNavLabel(); }
+  }).catch(() => {});
   updateAvatarUI(state.user?.avatar || null);
 
   const hdr = document.getElementById('hdr');
@@ -3482,12 +3488,36 @@ async function loadSharedExpenses() {
     if (p === null) return;
     state.sharedLinked = !!p.linked;
     state.sharedPartner = p.partner;
-    if (!state.sharedLinked) { renderSharedView(); return; }
-    const data = await api('GET', '/shared-expenses');
+    syncPartnerNavLabel();
+    if (!state.sharedLinked) { state.sharedView = 'groups'; renderSharedView(); return; }
+    const data = await api('GET', '/shared-groups');
+    if (data === null) return;
+    state.sharedGroups = data.groups ?? [];
+    state.sharedView = 'groups';
+    renderSharedView();
+  } catch(e) {
+    el.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><h3>Error</h3><p>${e.message}</p></div>`;
+  }
+}
+
+function syncPartnerNavLabel() {
+  const el = document.getElementById('tab-shared-label');
+  if (!el) return;
+  el.textContent = state.sharedPartner?.name?.split(' ')[0] || 'Pareja';
+}
+
+async function openSharedGroup(groupId) {
+  const el = document.getElementById('shared-content');
+  el.innerHTML = ldg();
+  state.sharedActiveGroupId = groupId;
+  state.sharedView = 'feed';
+  try {
+    const data = await api('GET', `/shared-expenses?groupId=${groupId || 'general'}`);
     if (data === null) return;
     state.sharedBalance = data.balance;
     state.sharedItems = data.items ?? [];
     state.sharedPartner = data.partner ?? state.sharedPartner;
+    syncPartnerNavLabel();
     renderSharedView();
   } catch(e) {
     el.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><h3>Error</h3><p>${e.message}</p></div>`;
@@ -3514,11 +3544,49 @@ function renderSharedView() {
     return;
   }
 
+  if (state.sharedView === 'groups') { renderSharedGroupsList(); return; }
+  renderSharedFeed();
+}
+
+function balancePill(balance) {
+  if (balance > 0.004) return `<span class="spill s-paid">+${fmtEur(balance)}</span>`;
+  if (balance < -0.004) return `<span class="spill s-pending">−${fmtEur(Math.abs(balance))}</span>`;
+  return `<span class="spill" style="background:var(--surface-2);color:var(--muted)">En paz</span>`;
+}
+
+function renderSharedGroupsList() {
+  const el = document.getElementById('shared-content');
+  const partnerName = state.sharedPartner?.name ?? 'tu pareja';
+  const rows = state.sharedGroups.map(g => {
+    const isGeneral = g.id === null;
+    return `
+      <div class="cat-card" onclick="openSharedGroup(${isGeneral ? 'null' : `'${g.id}'`})" style="cursor:pointer">
+        <div class="cat-dot" style="background:var(--primary-l);color:var(--primary-d)">${catIconSvg(isGeneral ? 'family' : 'plane', 18)}</div>
+        <div class="cat-info">
+          <div class="cat-name">${esc(g.name)}</div>
+        </div>
+        ${balancePill(g.balance)}
+        ${isGeneral ? '' : `<div class="cat-actions"><button class="act-btn del" onclick="event.stopPropagation(); deleteSharedGroup('${g.id}')">${FICO.trash}</button></div>`}
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Compartido con ${esc(partnerName)}. Organiza los gastos en grupos (ej. un viaje) o usa "General" para el día a día.</p>
+    ${rows}
+    <button class="add-btn" style="width:100%;justify-content:center;margin-top:6px" onclick="openNewGroupModal()">＋ Nuevo grupo</button>
+    <button class="btn-danger" style="width:100%;margin-top:18px" onclick="unlinkPartner()">Desvincular pareja</button>
+  `;
+}
+
+function renderSharedFeed() {
+  const el = document.getElementById('shared-content');
   const bal = state.sharedBalance;
   const abs = fmtEur(Math.abs(bal));
   const partnerName = state.sharedPartner?.name ?? 'tu pareja';
   const heroClass = bal < -0.004 ? 'neg' : '';
   const heroText = bal > 0.004 ? `${partnerName} te debe` : bal < -0.004 ? `Le debes a ${partnerName}` : 'Estáis en paz';
+  const group = state.sharedGroups.find(g => g.id === state.sharedActiveGroupId);
+  const groupName = state.sharedActiveGroupId === null ? 'General' : (group?.name ?? 'Grupo');
 
   const itemsHtml = state.sharedItems.length === 0
     ? `<div class="empty" style="padding:28px 16px"><div class="empty-ico">🤝</div><h3>Sin movimientos</h3><p>Añade el primer gasto compartido.</p></div>`
@@ -3572,17 +3640,17 @@ function renderSharedView() {
       }).join('');
 
   el.innerHTML = `
+    <button class="btn-s" onclick="loadSharedExpenses()" style="margin-bottom:12px">${FICO.undo} Grupos</button>
     <div class="balance-hero ${heroClass}">
       <div class="balance-hero-label">${heroText}</div>
       <div class="balance-hero-amount">${bal === 0 ? '0,00 €' : abs}</div>
-      <div class="balance-hero-sub">Compartido con ${esc(partnerName)}</div>
+      <div class="balance-hero-sub">${esc(groupName)} · con ${esc(partnerName)}</div>
     </div>
     <div class="ractions" style="margin-bottom:18px">
       <button class="btn-p" style="flex:1;margin-top:0" onclick="openSharedExpenseModal()">＋ Gasto compartido</button>
       <button class="btn-s" onclick="openSettleModal()">Registrar pago</button>
     </div>
     ${itemsHtml}
-    <button class="btn-danger" style="width:100%;margin-top:14px" onclick="unlinkPartner()">Desvincular pareja</button>
   `;
 }
 
@@ -3612,6 +3680,37 @@ async function unlinkPartner() {
   try {
     await api('DELETE', '/partner');
     showToast('Pareja desvinculada');
+    await loadSharedExpenses();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+function openNewGroupModal() {
+  document.getElementById('group-name').value = '';
+  document.getElementById('group-name-err').classList.remove('on');
+  openModal('group-modal');
+}
+
+async function saveSharedGroup() {
+  const name = document.getElementById('group-name').value.trim();
+  if (!name) { document.getElementById('group-name-err').classList.add('on'); return; }
+  document.getElementById('group-name-err').classList.remove('on');
+  const btn = document.getElementById('group-save-btn');
+  btn.disabled = true; btn.textContent = 'Creando…';
+  try {
+    await api('POST', '/shared-groups', { name });
+    showToast('Grupo creado', 'success');
+    closeModal('group-modal');
+    await loadSharedExpenses();
+  } catch(e) {
+    showToast(e.message || 'Error al crear el grupo', 'error');
+  } finally { btn.disabled = false; btn.textContent = 'Crear'; }
+}
+
+async function deleteSharedGroup(id) {
+  if (!confirm('¿Eliminar este grupo? Se borrarán también todos sus gastos y pagos registrados.')) return;
+  try {
+    await api('DELETE', `/shared-groups/${id}`);
+    showToast('Grupo eliminado');
     await loadSharedExpenses();
   } catch(e) { showToast(e.message, 'error'); }
 }
@@ -3646,10 +3745,10 @@ async function saveSharedExpense() {
   const btn = document.getElementById('se-save-btn');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
-    await api('POST', '/shared-expenses', { description, amount, paidByMe: state.sePaidByMe, date, notes });
+    await api('POST', '/shared-expenses', { description, amount, paidByMe: state.sePaidByMe, date, notes, groupId: state.sharedActiveGroupId || undefined });
     showToast('Gasto compartido añadido', 'success');
     closeModal('shared-expense-modal');
-    await loadSharedExpenses();
+    await openSharedGroup(state.sharedActiveGroupId);
   } catch(e) {
     showToast(e.message || 'Error al guardar', 'error');
   } finally { btn.disabled = false; btn.textContent = 'Guardar'; }
@@ -3660,7 +3759,7 @@ async function deleteSharedExpense(id) {
   try {
     await api('DELETE', `/shared-expenses/${id}`);
     showToast('Gasto eliminado');
-    await loadSharedExpenses();
+    await openSharedGroup(state.sharedActiveGroupId);
   } catch(e) { showToast(e.message, 'error'); }
 }
 
@@ -3686,10 +3785,10 @@ async function saveSettlement() {
   const btn = document.getElementById('settle-save-btn');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
-    await api('POST', '/shared-expenses/settle', { amount, iPaid: state.settleIPaid, note });
+    await api('POST', '/shared-expenses/settle', { amount, iPaid: state.settleIPaid, note, groupId: state.sharedActiveGroupId || undefined });
     showToast('Pago registrado', 'success');
     closeModal('settle-modal');
-    await loadSharedExpenses();
+    await openSharedGroup(state.sharedActiveGroupId);
   } catch(e) {
     showToast(e.message || 'Error al guardar', 'error');
   } finally { btn.disabled = false; btn.textContent = 'Registrar'; }
@@ -3700,10 +3799,11 @@ async function deleteSettlement(id) {
   try {
     await api('DELETE', `/shared-expenses/settle/${id}`);
     showToast('Pago eliminado');
-    await loadSharedExpenses();
+    await openSharedGroup(state.sharedActiveGroupId);
   } catch(e) { showToast(e.message, 'error'); }
 }
 
+/* ═══════════════════════════════════════════════════════════
 /* ═══════════════════════════════════════════════════════════
    CLOSE MODAL ON BACKDROP CLICK
 ════════════════════════════════════════════════════════════════ */
