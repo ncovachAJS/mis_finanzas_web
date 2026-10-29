@@ -38,6 +38,9 @@ const EXPENSE_TYPES = {
 const state = {
   token: localStorage.getItem('finanzas_token') || null,
   user:  JSON.parse(localStorage.getItem('finanzas_user') || 'null'),
+  detailItem: null,
+  receiptTargetId: null,
+  receiptObjectUrl: null,
   month: new Date().getMonth() + 1,
   year:  new Date().getFullYear(),
   dashYear: new Date().getFullYear(),
@@ -1255,7 +1258,7 @@ function renderExpenseCard(e) {
     <div class="rcard" id="gasto-${e.id}">
       <div class="ubar ${e.isPaid ? 'expense-paid' : 'expense-pending'}"></div>
       <div class="rbody">
-        <div class="rmeta">
+        <div class="rmeta" onclick="openExpenseDetail('${e.id}')" style="cursor:pointer">
           <div>
             <div class="rcat">${esc(e.accountName || state.accounts.find(a => String(a.id) === String(e.accountId))?.name || 'Sin cuenta')}${e.recurrence && e.recurrence !== 'NONE' ? ' · ' + recLabel(e.recurrence) : ''}</div>
             <div class="rtitle">${esc(e.name)}</div>
@@ -1343,7 +1346,7 @@ function renderIngresos() {
     <div class="rcard" id="ingreso-${i.id}">
       <div class="ubar ${i.isPaid ? 'paid' : 'pending'}"></div>
       <div class="rbody">
-        <div class="rmeta">
+        <div class="rmeta" onclick="openIncomeDetail('${i.id}')" style="cursor:pointer">
           <div>
             <div class="rcat">${(() => { const acName = i.accountName || state.accounts.find(a => String(a.id) === String(i.accountId))?.name || ''; const rec = i.recurrence && i.recurrence !== 'NONE' ? recLabel(i.recurrence) : 'Ingreso'; return acName ? `${acName} · ${rec}` : rec; })()}</div>
             <div class="rtitle">${esc(i.name)}</div>
@@ -2260,6 +2263,209 @@ function resizeImageToBase64(file, size = 200) {
   });
 }
 
+/* ═══════════════════════════════════════════════════════════
+   FOTOS DE TICKETS — guardadas solo en este dispositivo (IndexedDB),
+   nunca se envían al servidor.
+════════════════════════════════════════════════════════════════ */
+const RECEIPTS_DB_NAME = 'cuentasclaras-receipts';
+const RECEIPTS_STORE    = 'receipts';
+
+function _openReceiptsDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(RECEIPTS_DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      if (!req.result.objectStoreNames.contains(RECEIPTS_STORE)) {
+        req.result.createObjectStore(RECEIPTS_STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = () => reject(req.error);
+  });
+}
+
+async function getReceiptBlob(expenseId) {
+  try {
+    const db = await _openReceiptsDB();
+    return await new Promise((resolve, reject) => {
+      const tx  = db.transaction(RECEIPTS_STORE, 'readonly');
+      const req = tx.objectStore(RECEIPTS_STORE).get(expenseId);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror   = () => reject(req.error);
+    });
+  } catch(e) { return null; }
+}
+
+async function putReceiptBlob(expenseId, blob) {
+  const db = await _openReceiptsDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(RECEIPTS_STORE, 'readwrite');
+    tx.objectStore(RECEIPTS_STORE).put(blob, expenseId);
+    tx.oncomplete = () => resolve();
+    tx.onerror    = () => reject(tx.error);
+  });
+}
+
+async function deleteReceiptBlob(expenseId) {
+  try {
+    const db = await _openReceiptsDB();
+    return await new Promise((resolve) => {
+      const tx = db.transaction(RECEIPTS_STORE, 'readwrite');
+      tx.objectStore(RECEIPTS_STORE).delete(expenseId);
+      tx.oncomplete = () => resolve();
+      tx.onerror    = () => resolve();
+    });
+  } catch(e) {}
+}
+
+/** Redimensiona una foto de ticket manteniendo proporción, para guardarla comprimida en IndexedDB. */
+function resizeImageToBlob(file, maxDim = 1600, quality = 0.85) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const scale = maxDim / Math.max(width, height);
+        width  = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('sin blob')), 'image/jpeg', quality);
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+function pickReceiptPhoto(expenseId) {
+  state.receiptTargetId = expenseId;
+  const input = document.getElementById('receipt-file-input');
+  input.value = '';
+  input.click();
+}
+
+async function onReceiptFileChange(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const expenseId = state.receiptTargetId;
+  try {
+    const blob = await resizeImageToBlob(file);
+    await putReceiptBlob(expenseId, blob);
+    showToast('Foto guardada en este dispositivo', 'success');
+  } catch(e) {
+    showToast('No se pudo guardar la foto', 'error');
+  }
+  if (state.detailItem && state.detailItem.id === expenseId) renderReceiptArea(expenseId);
+}
+
+async function removeReceiptPhoto(expenseId) {
+  await deleteReceiptBlob(expenseId);
+  if (state.detailItem && state.detailItem.id === expenseId) renderReceiptArea(expenseId);
+  showToast('Foto eliminada');
+}
+
+function viewReceiptFullscreen(url) {
+  document.getElementById('receipt-view-img').src = url;
+  openModal('receipt-view-modal');
+}
+
+async function renderReceiptArea(expenseId) {
+  const area = document.getElementById('receipt-area');
+  if (!area) return;
+  const blob = await getReceiptBlob(expenseId);
+  if (!document.getElementById('receipt-area')) return; // el modal pudo cerrarse mientras cargaba
+  if (state.receiptObjectUrl) { URL.revokeObjectURL(state.receiptObjectUrl); state.receiptObjectUrl = null; }
+  if (blob) {
+    const url = URL.createObjectURL(blob);
+    state.receiptObjectUrl = url;
+    area.innerHTML = `
+      <div class="receipt-thumb-wrap">
+        <img src="${url}" class="receipt-thumb" onclick="viewReceiptFullscreen('${url}')">
+      </div>
+      <div class="receipt-thumb-actions">
+        <button class="act-btn" style="flex:1" onclick="pickReceiptPhoto('${expenseId}')">🔄 Cambiar</button>
+        <button class="act-btn del" style="flex:1" onclick="removeReceiptPhoto('${expenseId}')">🗑 Quitar</button>
+      </div>`;
+  } else {
+    area.innerHTML = `
+      <button class="receipt-add-btn" onclick="pickReceiptPhoto('${expenseId}')">
+        <span class="ico">📷</span>
+        <span>Añadir foto del ticket</span>
+      </button>`;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DETALLE DE GASTO / INGRESO
+════════════════════════════════════════════════════════════════ */
+function openExpenseDetail(id) {
+  state.detailItem = { kind: 'expense', id };
+  renderItemDetail();
+  openModal('item-detail-modal');
+}
+
+function openIncomeDetail(id) {
+  state.detailItem = { kind: 'income', id };
+  renderItemDetail();
+  openModal('item-detail-modal');
+}
+
+async function toggleDetailPaid() {
+  const { kind, id } = state.detailItem || {};
+  if (!kind) return;
+  const item = kind === 'expense' ? state.expenses.find(e => e.id === id) : state.incomes.find(i => i.id === id);
+  if (!item) return;
+  await (kind === 'expense' ? toggleExpensePaid(id, item.isPaid) : toggleIncomePaid(id, item.isPaid));
+  renderItemDetail();
+}
+
+function renderItemDetail() {
+  const { kind, id } = state.detailItem || {};
+  const isExpense = kind === 'expense';
+  const item = isExpense ? state.expenses.find(e => e.id === id) : state.incomes.find(i => i.id === id);
+  const el = document.getElementById('item-detail-content');
+  if (!item || !el) { closeModal('item-detail-modal'); return; }
+
+  const acc = item.accountName || state.accounts.find(a => String(a.id) === String(item.accountId))?.name;
+  const rows = [['Cuenta', acc || 'Sin cuenta']];
+  if (isExpense) {
+    if (item.categoryName) rows.push(['Categoría', `${item.categoryIcon ? item.categoryIcon + ' ' : ''}${item.categoryName}`]);
+    if (item.expenseType && EXPENSE_TYPES[item.expenseType]) rows.push(['Tipo', EXPENSE_TYPES[item.expenseType].label]);
+    if (item.cuotaNumber && item.totalCuotas) rows.push(['Cuota', `${item.cuotaNumber} de ${item.totalCuotas}`]);
+  }
+  if (item.recurrence && item.recurrence !== 'NONE') rows.push(['Recurrencia', recLabel(item.recurrence)]);
+  rows.push(['Mes', `${MONTHS[item.month - 1]} ${item.year}`]);
+
+  document.getElementById('item-detail-title').textContent = item.name;
+
+  el.innerHTML = `
+    <div class="detail-amount" style="color:var(${isExpense ? '--expense' : '--income'})">${isExpense ? '− ' : '+ '}${fmtEur(item.amount)}</div>
+    <span class="spill ${item.isPaid ? 's-paid' : 's-pending'}" style="margin-bottom:14px;display:inline-block">${item.isPaid ? (isExpense ? 'Pagado' : 'Cobrado') : 'Pendiente'}</span>
+    ${rows.map(([l, v]) => `<div class="detail-row"><span class="detail-row-label">${esc(l)}</span><span class="detail-row-value">${esc(v)}</span></div>`).join('')}
+    ${item.notes ? `<div class="detail-notes">${esc(item.notes)}</div>` : ''}
+    ${isExpense ? `
+      <div class="receipt-box">
+        <div class="slbl" style="margin-top:14px">Foto del ticket</div>
+        <div class="receipt-hint">Se guarda solo en este dispositivo, no se sube a ningún servidor.</div>
+        <div id="receipt-area">${ldg()}</div>
+      </div>` : ''}
+    <div class="ractions" style="margin-top:18px;flex-wrap:wrap">
+      <button class="act-btn paid-toggle ${item.isPaid ? 'is-paid' : ''}" onclick="toggleDetailPaid()">
+        ${item.isPaid ? '↩ Pendiente' : (isExpense ? '✓ Pagado' : '✓ Cobrado')}
+      </button>
+      <button class="act-btn" onclick="closeModal('item-detail-modal'); ${isExpense ? 'openExpenseModal' : 'openIncomeModal'}('${item.id}')">✏️ Editar</button>
+      <button class="act-btn" onclick="closeModal('item-detail-modal'); ${isExpense ? 'duplicateExpense' : 'duplicateIncome'}('${item.id}')" title="Duplicar">📋</button>
+      <button class="act-btn" onclick="${isExpense ? 'shareExpense' : 'shareIncome'}('${item.id}')" title="Compartir">📤</button>
+      <button class="act-btn del" onclick="closeModal('item-detail-modal'); ${isExpense ? 'askDeleteExpense' : 'askDeleteIncome'}('${item.id}')">🗑</button>
+    </div>
+  `;
+
+  if (isExpense) renderReceiptArea(item.id);
+}
+
 function updateAvatarUI(src) {
   const icoEl = document.querySelector('.btn-profile-ico');
   if (icoEl) {
@@ -2455,6 +2661,7 @@ function askDeleteRecurring(kind, item, reload) {
   };
   state.pendingDeleteFn = async () => {
     await api('DELETE', `/${kind}/${item.id}`);
+    if (kind === 'expenses') await deleteReceiptBlob(item.id);
     await done(`${label[0].toUpperCase() + label.slice(1)} eliminado`);
   };
   state.pendingDeleteFollowingFn = recurring ? async () => {

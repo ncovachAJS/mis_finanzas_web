@@ -861,6 +861,22 @@
   </div>
 </div>
 
+<!-- Modal Detalle de gasto/ingreso -->
+<div class="modal" id="item-detail-modal">
+  <div class="modal-box">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="item-detail-title">Detalle</div>
+    <div id="item-detail-content"></div>
+  </div>
+</div>
+<input type="file" id="receipt-file-input" accept="image/*" capture="environment" style="display:none" onchange="onReceiptFileChange(this)">
+
+<!-- Visor de la foto del ticket a pantalla completa -->
+<div class="modal" id="receipt-view-modal" onclick="closeModal('receipt-view-modal')">
+  <img id="receipt-view-img" class="receipt-view-img" src="" alt="Ticket">
+  <button class="receipt-view-close" onclick="event.stopPropagation(); closeModal('receipt-view-modal')">✕</button>
+</div>
+
 <!-- Modal Detalle de inversión -->
 <div class="modal" id="investment-detail-modal">
   <div class="modal-box">
