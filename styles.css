@@ -141,14 +141,13 @@ input[type=date]{color-scheme:light}
 
 /* STATS */
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px}
-.scard{background:var(--surface);border:none;border-radius:16px;padding:16px 18px;text-align:center;box-shadow:0 1px 6px rgba(0,0,0,.06),0 4px 20px rgba(0,0,0,.04);position:relative;overflow:hidden}
-.scard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--border-l)}
-.scard:has(.c-income)::before{background:var(--income)}
-.scard:has(.c-expense)::before{background:var(--expense)}
-.scard:has(.c-pending)::before{background:var(--pending)}
-.scard:has(.c-balance-pos)::before{background:var(--income)}
-.scard:has(.c-balance-neg)::before{background:var(--expense)}
-.scard:has(.c-primary)::before{background:var(--primary)}
+.scard{background:var(--surface);border:1.5px solid var(--border-l);border-radius:16px;padding:16px 18px;text-align:center;box-shadow:0 1px 6px rgba(0,0,0,.06),0 4px 20px rgba(0,0,0,.04);position:relative;overflow:hidden;transition:transform .15s}
+.scard:has(.c-income){background:linear-gradient(160deg,var(--income-l),var(--surface) 70%);border-color:var(--income)}
+.scard:has(.c-expense){background:linear-gradient(160deg,var(--expense-l),var(--surface) 70%);border-color:var(--expense)}
+.scard:has(.c-pending){background:linear-gradient(160deg,var(--pending-l),var(--surface) 70%);border-color:var(--pending)}
+.scard:has(.c-balance-pos){background:linear-gradient(160deg,var(--income-l),var(--surface) 70%);border-color:var(--income)}
+.scard:has(.c-balance-neg){background:linear-gradient(160deg,var(--expense-l),var(--surface) 70%);border-color:var(--expense)}
+.scard:has(.c-primary){background:linear-gradient(160deg,var(--primary-l),var(--surface) 70%);border-color:var(--primary)}
 .snum{font-family:'DM Serif Display',serif;font-size:26px;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .snum.c-income{color:var(--income)}.snum.c-expense{color:var(--expense)}.snum.c-pending{color:var(--pending)}.snum.c-balance-pos{color:var(--income)}.snum.c-balance-neg{color:var(--expense)}.snum.c-primary{color:var(--primary)}
 .slbls{font-size:12px;color:var(--muted);margin-top:6px;font-weight:500;letter-spacing:.02em}
