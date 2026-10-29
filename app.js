@@ -1283,7 +1283,7 @@ function renderExpenseCard(e) {
           <div class="ramount expense">${fmtEur(e.amount)}</div>
         </div>
         <div class="rfoot">
-          <span class="spill ${e.isPaid ? 's-paid' : 's-pending'}">${e.isPaid ? 'Pagado' : 'Pendiente'}</span>
+          <span class="spill ${e.isPaid ? 's-paid' : 's-pending'}">Estado actual: ${e.isPaid ? 'Pagado' : 'Pendiente'}</span>
           <div class="ractions">
             <button class="act-btn paid-toggle ${e.isPaid ? 'is-paid' : ''}" onclick="toggleExpensePaid('${e.id}',${e.isPaid})">
               ${e.isPaid ? FICO.undo + 'Pendiente' : FICO.check + 'Pagado'}
@@ -1371,7 +1371,7 @@ function renderIngresos() {
           <div class="ramount income">${fmtEur(i.amount)}</div>
         </div>
         <div class="rfoot">
-          <span class="spill ${i.isPaid ? 's-paid' : 's-pending'}">${i.isPaid ? 'Cobrado' : 'Pendiente'}</span>
+          <span class="spill ${i.isPaid ? 's-paid' : 's-pending'}">Estado actual: ${i.isPaid ? 'Cobrado' : 'Pendiente'}</span>
           <div class="ractions">
             <button class="act-btn paid-toggle ${i.isPaid ? 'is-paid' : ''}" onclick="toggleIncomePaid('${i.id}',${i.isPaid})">
               ${i.isPaid ? FICO.undo + 'Pendiente' : FICO.check + 'Cobrado'}
@@ -2459,7 +2459,7 @@ function renderItemDetail() {
 
   el.innerHTML = `
     <div class="detail-amount" style="color:var(${isExpense ? '--expense' : '--income'})">${isExpense ? '− ' : '+ '}${fmtEur(item.amount)}</div>
-    <span class="spill ${item.isPaid ? 's-paid' : 's-pending'}" style="margin-bottom:14px;display:inline-block">${item.isPaid ? (isExpense ? 'Pagado' : 'Cobrado') : 'Pendiente'}</span>
+    <span class="spill ${item.isPaid ? 's-paid' : 's-pending'}" style="margin-bottom:14px;display:inline-block">Estado actual: ${item.isPaid ? (isExpense ? 'Pagado' : 'Cobrado') : 'Pendiente'}</span>
     ${rows.map(([l, v]) => `<div class="detail-row"><span class="detail-row-label">${esc(l)}</span><span class="detail-row-value">${esc(v)}</span></div>`).join('')}
     ${item.notes ? `<div class="detail-notes">${esc(item.notes)}</div>` : ''}
     ${isExpense ? `
