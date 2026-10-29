@@ -69,9 +69,9 @@ h1{font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;line-heig
 .btn-profile-name{font-size:13px;font-weight:600;color:rgba(255,255,255,.9);letter-spacing:.01em;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .btn-profile-ico{font-size:18px;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;line-height:1}
 /* BOTTOM NAV */
-.bnav{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:#1e1e1e;border-radius:28px;padding:6px;display:flex;gap:2px;z-index:200;box-shadow:0 8px 32px rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.1)}
-.bnav-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 16px;border:none;background:none;color:rgba(255,255,255,.45);font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:.03em;cursor:pointer;border-radius:22px;transition:all .18s;min-width:58px;-webkit-tap-highlight-color:transparent}
-.bnav-item.on{background:rgba(255,255,255,.13);color:#fff}
+.bnav{position:fixed;bottom:0;left:0;right:0;background:#13131a;padding:8px 4px calc(8px + env(safe-area-inset-bottom,0px));display:flex;gap:0;z-index:200;box-shadow:0 -4px 24px rgba(0,0,0,.4);border-top:1px solid rgba(255,255,255,.08)}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border:none;background:none;color:rgba(255,255,255,.45);font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:.03em;cursor:pointer;border-radius:14px;transition:all .18s;-webkit-tap-highlight-color:transparent}
+.bnav-item.on{color:var(--accent)}
 .bnav-item:active{transform:scale(.94)}
 .bnav-badge-wrap{position:relative;display:flex;align-items:center;justify-content:center}
 .bnav-badge{position:absolute;top:-4px;right:-8px;background:var(--accent);color:#fff;border-radius:8px;font-size:9px;font-weight:700;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 4px;line-height:1}
@@ -240,7 +240,7 @@ input[type=date]{color-scheme:light}
 .ubar.paid{background:var(--income)}.ubar.pending{background:var(--pending)}.ubar.expense-paid{background:var(--expense)}.ubar.expense-pending{background:var(--pending)}
 .rbody{padding:14px 18px 16px}
 .rmeta{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
-.rico{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.rico{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;box-shadow:inset 0 0 0 1.5px currentColor}
 .rmeta-main{flex:1;min-width:140px}
 .rcat{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin-bottom:3px}
 .ramount{font-family:'DM Serif Display',serif;font-size:23px;font-weight:400;line-height:1;color:var(--text);white-space:nowrap;letter-spacing:-.01em}
@@ -264,7 +264,7 @@ input[type=date]{color-scheme:light}
 /* TAGS */
 .tag-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;margin-bottom:2px}
 .type-tag{font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;border:1px solid;letter-spacing:.02em}
-.cat-tag{font-size:11px;padding:3px 8px;border-radius:10px;background:var(--surface-2);color:var(--muted);border:1px solid var(--border)}
+.cat-tag{font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;background:var(--surface-2);color:var(--muted);border:1px solid var(--border)}
 .cuota-tag{font-size:11px;padding:3px 8px;border-radius:10px;background:var(--pending-l);color:var(--pending);border:1px solid var(--pending)}
 
 /* GROUP HEADER (gastos por tipo) */

@@ -1250,10 +1250,10 @@ function renderGastos() {
 function renderExpenseCard(e) {
   const cuotaTag = (e.cuotaNumber && e.totalCuotas)
     ? `<span class="cuota-tag">Cuota ${e.cuotaNumber} de ${e.totalCuotas}</span>` : '';
-  const catTag = e.categoryName
-    ? `<span class="cat-tag">${e.categoryIcon ? e.categoryIcon + ' ' : ''}${esc(e.categoryName)}</span>` : '';
-  const tp = typePill(e.expenseType);
   const ricoColor = e.categoryColor || '#b83030';
+  const catTag = e.categoryName
+    ? `<span class="cat-tag" style="background:${ricoColor}22;color:${ricoColor};border-color:${ricoColor}55">${e.categoryIcon ? e.categoryIcon + ' ' : ''}${esc(e.categoryName)}</span>` : '';
+  const tp = typePill(e.expenseType);
   const ricoIcon  = e.categoryIcon || '🧾';
 
   return `
@@ -1261,7 +1261,7 @@ function renderExpenseCard(e) {
       <div class="ubar ${e.isPaid ? 'expense-paid' : 'expense-pending'}"></div>
       <div class="rbody">
         <div class="rmeta" onclick="openExpenseDetail('${e.id}')" style="cursor:pointer">
-          <div class="rico" style="background:${ricoColor}1e;color:${ricoColor}">${ricoIcon}</div>
+          <div class="rico" style="background:${ricoColor}2e;color:${ricoColor}">${ricoIcon}</div>
           <div class="rmeta-main">
             <div class="rcat">${esc(e.accountName || state.accounts.find(a => String(a.id) === String(e.accountId))?.name || 'Sin cuenta')}${e.recurrence && e.recurrence !== 'NONE' ? ' · ' + recLabel(e.recurrence) : ''}</div>
             <div class="rtitle">${esc(e.name)}</div>
@@ -1350,7 +1350,7 @@ function renderIngresos() {
       <div class="ubar ${i.isPaid ? 'paid' : 'pending'}"></div>
       <div class="rbody">
         <div class="rmeta" onclick="openIncomeDetail('${i.id}')" style="cursor:pointer">
-          <div class="rico" style="background:#2b7d541e;color:#2b7d54">💰</div>
+          <div class="rico" style="background:#2b7d542e;color:#2b7d54">💰</div>
           <div class="rmeta-main">
             <div class="rcat">${(() => { const acName = i.accountName || state.accounts.find(a => String(a.id) === String(i.accountId))?.name || ''; const rec = i.recurrence && i.recurrence !== 'NONE' ? recLabel(i.recurrence) : 'Ingreso'; return acName ? `${acName} · ${rec}` : rec; })()}</div>
             <div class="rtitle">${esc(i.name)}</div>
