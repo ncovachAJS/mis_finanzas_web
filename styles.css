@@ -205,9 +205,8 @@ input[type=date]{color-scheme:light}
 
 /* MONTH SELECTOR */
 .month-nav{display:flex;align-items:center;justify-content:center;gap:2px;margin:0 0 20px;width:100%;background:linear-gradient(135deg,var(--hero-a),var(--hero-b));border-radius:12px;padding:10px 8px;box-shadow:0 3px 14px rgba(0,0,0,.18)}
-.month-nav-btn{width:36px;height:36px;border-radius:50%;background:none;border:none;color:#fff;font-size:28px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+.month-nav-btn{width:36px;height:36px;border-radius:50%;background:none;border:none;color:#fff;font-size:28px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;-webkit-tap-highlight-color:transparent}
 .month-nav-btn:active{opacity:.6}
-.month-nav-btn:hover{background:rgba(255,255,255,.24)}
 .month-label{font-family:'DM Sans',sans-serif;font-size:19px;font-weight:700;color:#fff;flex:1;text-align:center;letter-spacing:.01em}
 
 /* FILTER BAR */
