@@ -273,7 +273,9 @@ input[type=date]{color-scheme:light}
 .cuota-tag{font-size:11px;padding:3px 8px;border-radius:10px;background:var(--pending-l);color:var(--pending);border:1px solid var(--pending)}
 
 /* GROUP HEADER (gastos por tipo) */
-.group-hdr{display:flex;align-items:center;gap:8px;padding:8px 0 6px;margin-top:4px;margin-bottom:6px;border-bottom:1px solid var(--border-l)}
+.group-hdr{display:flex;align-items:center;gap:8px;padding:8px 0 6px;margin-top:4px;margin-bottom:6px;border-bottom:1px solid var(--border-l);-webkit-tap-highlight-color:transparent}
+.group-hdr-chevron{display:inline-flex;color:var(--faint);font-size:11px;transition:transform .18s;transform:rotate(0deg)}
+.group-hdr-chevron.open{transform:rotate(90deg)}
 .group-hdr-ico{display:inline-flex;align-items:center;color:var(--muted)}
 .group-hdr-ico svg{width:16px;height:16px}
 .group-hdr-label{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);flex:1}

@@ -109,6 +109,7 @@ const state = {
   sharedActiveGroupId: null,
   sharedView: 'groups',
   editingSharedExpenseId: null,
+  gastosCollapsedGroups: new Set(),
   month: new Date().getMonth() + 1,
   year:  new Date().getFullYear(),
   dashYear: new Date().getFullYear(),
@@ -1306,18 +1307,30 @@ function renderGastos() {
     const grpItems = groups[key];
     const grpTotal = grpItems.reduce((s,e) => s + e.amount, 0);
     const meta = key ? EXPENSE_TYPES[key] : null;
-    if (Object.keys(groups).length > 1 || key) {
-      html += `<div class="group-hdr">
+    const multiGroup = Object.keys(groups).length > 1 || key;
+    const collapsed = state.gastosCollapsedGroups.has(key);
+    const cardsHtml = grpItems.slice().sort((a, b) => (a.isPaid ? 1 : 0) - (b.isPaid ? 1 : 0))
+      .map(e => renderExpenseCard(e)).join('');
+    if (multiGroup) {
+      html += `<div class="group-hdr" onclick="toggleGastosGroup('${key}')" style="cursor:pointer">
+        <span class="group-hdr-chevron ${collapsed ? '' : 'open'}">▸</span>
         <span class="group-hdr-ico">${meta ? meta.icon : '📋'}</span>
         <span class="group-hdr-label">${meta ? meta.label : 'Sin tipo'}</span>
         <span class="group-hdr-total">${fmtEur(grpTotal)}</span>
-      </div>`;
+      </div>
+      <div class="group-body" style="${collapsed ? 'display:none' : ''}">${cardsHtml}</div>`;
+    } else {
+      html += cardsHtml;
     }
-    grpItems.slice().sort((a, b) => (a.isPaid ? 1 : 0) - (b.isPaid ? 1 : 0))
-      .forEach(e => { html += renderExpenseCard(e); });
   });
 
   document.getElementById('gastos-content').innerHTML = html;
+}
+
+function toggleGastosGroup(key) {
+  if (state.gastosCollapsedGroups.has(key)) state.gastosCollapsedGroups.delete(key);
+  else state.gastosCollapsedGroups.add(key);
+  renderGastos();
 }
 
 function renderExpenseCard(e) {
