@@ -504,7 +504,7 @@ input[type=date]{color-scheme:light}
 body.printing>*:not(#print-area){display:none!important}
 body.printing{background:#fff!important}
 body.printing #print-area{display:block;background:#fff;color:#111;padding:16px;min-height:100vh;box-sizing:border-box}
-.print-close-bar{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:flex-end;gap:12px;margin:0 -16px 16px;padding:12px 16px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.print-close-bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;display:flex;align-items:center;justify-content:flex-end;gap:12px;margin:0 -16px 16px;padding:12px 16px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.08)}
 .print-close-bar p{flex:1;margin:0;font-size:12px;color:var(--danger,#b83030)}
 #print-close-btn{background:var(--surface-2,#e8e5de);border:none;border-radius:8px;padding:10px 20px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;color:#111;cursor:pointer;flex-shrink:0}
 @media print{.print-close-bar{display:none}}
