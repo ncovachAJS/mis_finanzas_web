@@ -3634,7 +3634,7 @@ function renderSharedOverview() {
   const heroText = bal > 0.004 ? `${partnerName} te debe` : bal < -0.004 ? `Le debes a ${partnerName}` : 'Estáis en paz';
 
   const breakdownLines = state.sharedGroups
-    .filter(g => Math.abs(g.balance) > 0.004)
+    .filter(g => g.id && Math.abs(g.balance) > 0.004)
     .map(g => {
       const line = g.balance > 0
         ? `${esc(partnerName)} te debe ${fmtEur(g.balance)} en "${esc(g.name)}"`
@@ -3666,23 +3666,23 @@ function renderSharedOverview() {
 function renderSharedGroupsList() {
   const el = document.getElementById('shared-content');
   const partnerName = state.sharedPartner?.name ?? 'tu pareja';
-  const rows = state.sharedGroups.map(g => {
-    const isGeneral = g.id === null;
-    return `
-      <div class="cat-card" onclick="openSharedGroup(${isGeneral ? 'null' : `'${g.id}'`})" style="cursor:pointer">
-        <div class="cat-dot" style="background:var(--primary-l);color:var(--primary-d)">${catIconSvg(isGeneral ? 'family' : 'plane', 18)}</div>
+  const realGroups = state.sharedGroups.filter(g => g.id);
+  const rows = realGroups.map(g => `
+      <div class="cat-card" onclick="openSharedGroup('${g.id}')" style="cursor:pointer">
+        <div class="cat-dot" style="background:var(--primary-l);color:var(--primary-d)">${catIconSvg('plane', 18)}</div>
         <div class="cat-info">
           <div class="cat-name">${esc(g.name)}</div>
         </div>
         ${balancePill(g.balance)}
-        ${isGeneral ? '' : `<div class="cat-actions"><button class="act-btn del" onclick="event.stopPropagation(); deleteSharedGroup('${g.id}')">${FICO.trash}</button></div>`}
-      </div>`;
-  }).join('');
+        <div class="cat-actions"><button class="act-btn del" onclick="event.stopPropagation(); deleteSharedGroup('${g.id}')">${FICO.trash}</button></div>
+      </div>`).join('');
+  const empty = realGroups.length === 0
+    ? `<div class="empty" style="padding:24px 8px"><div class="empty-ico">✈️</div><h3>Sin grupos</h3><p>Crea un grupo (ej. un viaje) para empezar a añadir gastos.</p></div>` : '';
 
   el.innerHTML = `
     <button class="btn-s" onclick="loadSharedExpenses()" style="margin-bottom:12px">${FICO.undo} Volver</button>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Compartido con ${esc(partnerName)}. Organiza los gastos en grupos (ej. un viaje) o usa "General" para el día a día.</p>
-    ${rows}
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Compartido con ${esc(partnerName)}. Organiza los gastos compartidos en grupos (ej. un viaje).</p>
+    ${rows}${empty}
     <button class="add-btn" style="width:100%;justify-content:center;margin-top:6px" onclick="openNewGroupModal()">＋ Nuevo grupo</button>
     <button class="btn-danger" style="width:100%;margin-top:18px" onclick="unlinkPartner()">Desvincular pareja</button>
   `;
@@ -3781,14 +3781,25 @@ async function deleteSharedGroup(id) {
 function populateGroupSelect(selectId) {
   const sel = document.getElementById(selectId);
   if (!sel) return;
+  const groups = state.sharedGroups.filter(g => g.id);
   const current = state.sharedView === 'feed' ? state.sharedActiveGroupId : null;
-  sel.innerHTML = state.sharedGroups.map(g =>
-    `<option value="${g.id ?? ''}">${esc(g.name)}</option>`
+  sel.innerHTML = groups.map(g =>
+    `<option value="${g.id}">${esc(g.name)}</option>`
   ).join('');
-  sel.value = current ?? '';
+  const fallback = groups[0]?.id ?? '';
+  sel.value = (current && groups.some(g => g.id === current)) ? current : fallback;
+}
+
+function hasSharedGroups() {
+  return state.sharedGroups.some(g => g.id);
 }
 
 function openSharedExpenseModal(editItem) {
+  if (!editItem && !hasSharedGroups()) {
+    showToast('Primero crea un grupo (ej. un viaje) para añadir gastos', 'error');
+    openGroupsManagement();
+    return;
+  }
   state.editingSharedExpenseId = editItem ? editItem.id : null;
   document.getElementById('shared-expense-modal-title').textContent = editItem ? 'Editar gasto compartido' : 'Nuevo gasto compartido';
   document.getElementById('se-desc').value = editItem ? editItem.description : '';
@@ -3799,7 +3810,7 @@ function openSharedExpenseModal(editItem) {
   document.getElementById('se-paidby-other-btn').textContent = state.sharedPartner?.name ?? 'Mi pareja';
   setPaidByMe(editItem ? editItem.iPaid : true);
   populateGroupSelect('se-group');
-  if (editItem) document.getElementById('se-group').value = editItem.groupId ?? '';
+  if (editItem?.groupId) document.getElementById('se-group').value = editItem.groupId;
   openModal('shared-expense-modal');
 }
 
@@ -3855,6 +3866,11 @@ async function deleteSharedExpense(id) {
 }
 
 function openSettleModal() {
+  if (!hasSharedGroups()) {
+    showToast('Primero crea un grupo (ej. un viaje) para registrar pagos', 'error');
+    openGroupsManagement();
+    return;
+  }
   document.getElementById('settle-amount').value = Math.abs(state.sharedBalance) > 0.004 ? Math.abs(state.sharedBalance).toFixed(2) : '';
   document.getElementById('settle-note').value = '';
   document.getElementById('settle-amount-err').classList.remove('on');
