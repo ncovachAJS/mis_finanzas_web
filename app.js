@@ -1313,7 +1313,8 @@ function renderGastos() {
         <span class="group-hdr-total">${fmtEur(grpTotal)}</span>
       </div>`;
     }
-    grpItems.forEach(e => { html += renderExpenseCard(e); });
+    grpItems.slice().sort((a, b) => (a.isPaid ? 1 : 0) - (b.isPaid ? 1 : 0))
+      .forEach(e => { html += renderExpenseCard(e); });
   });
 
   document.getElementById('gastos-content').innerHTML = html;
