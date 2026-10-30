@@ -110,6 +110,7 @@ const state = {
   sharedView: 'groups',
   editingSharedExpenseId: null,
   gastosCollapsedGroups: new Set(),
+  sharedCollapsedGroups: new Set(),
   month: new Date().getMonth() + 1,
   year:  new Date().getFullYear(),
   dashYear: new Date().getFullYear(),
@@ -3660,7 +3661,7 @@ function renderSharedOverview() {
 
   const itemsHtml = state.sharedItems.length === 0
     ? `<div class="empty" style="padding:28px 16px"><div class="empty-ico">🤝</div><h3>Sin movimientos</h3><p>Añade el primer gasto compartido.</p></div>`
-    : state.sharedItems.map(it => sharedItemRow(it, partnerName, true)).join('');
+    : renderSharedGroupedSections(partnerName);
 
   el.innerHTML = `
     <div class="balance-hero ${heroClass}">
@@ -3675,6 +3676,40 @@ function renderSharedOverview() {
     <button class="btn-s" style="width:100%;margin-bottom:18px;justify-content:center" onclick="openGroupsManagement()">${catIconSvg('plane', 15)} Grupos (${state.sharedGroups.filter(g => g.id).length})</button>
     ${itemsHtml}
   `;
+}
+
+/** Agrupa el feed combinado de Compartido por grupo, con cada sección plegable. */
+function renderSharedGroupedSections(partnerName) {
+  const buckets = new Map();
+  state.sharedItems.forEach(it => {
+    const key = it.groupId || '__sin_grupo__';
+    if (!buckets.has(key)) buckets.set(key, { name: it.groupName || 'Sin grupo', items: [] });
+    buckets.get(key).items.push(it);
+  });
+  const ordered = [];
+  state.sharedGroups.filter(g => g.id).forEach(g => {
+    if (buckets.has(g.id)) { ordered.push([g.id, buckets.get(g.id)]); buckets.delete(g.id); }
+  });
+  buckets.forEach((v, k) => ordered.push([k, v]));
+
+  return ordered.map(([key, sec]) => {
+    const total = sec.items.reduce((s, it) => s + it.amount, 0);
+    const collapsed = state.sharedCollapsedGroups.has(key);
+    const cardsHtml = sec.items.map(it => sharedItemRow(it, partnerName, false)).join('');
+    return `<div class="group-hdr" onclick="toggleSharedGroupSection('${key}')" style="cursor:pointer">
+        <span class="group-hdr-chevron ${collapsed ? '' : 'open'}">▸</span>
+        <span class="group-hdr-ico">${catIconSvg('plane', 16)}</span>
+        <span class="group-hdr-label">${esc(sec.name)}</span>
+        <span class="group-hdr-total">${fmtEur(total)}</span>
+      </div>
+      <div class="group-body" style="${collapsed ? 'display:none' : ''}">${cardsHtml}</div>`;
+  }).join('');
+}
+
+function toggleSharedGroupSection(key) {
+  if (state.sharedCollapsedGroups.has(key)) state.sharedCollapsedGroups.delete(key);
+  else state.sharedCollapsedGroups.add(key);
+  renderSharedOverview();
 }
 
 function renderSharedGroupsList() {
