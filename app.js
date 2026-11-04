@@ -142,6 +142,7 @@ const state = {
   twoFactorPasswordAction: null,
   pendingBackupCodes: null,
   pendingDeleteFollowingFn: null,
+  pendingDeleteSeriesFn: null,
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -197,8 +198,10 @@ function openModal(id) {
   _enableSwipeToClose(el);
   if (id === 'confirm-modal') {
     const hasFollowing = !!state.pendingDeleteFollowingFn;
+    const hasSeries = !!state.pendingDeleteSeriesFn;
     document.getElementById('confirm-following-btn').style.display = hasFollowing ? '' : 'none';
-    document.getElementById('confirm-delete-btn').textContent = hasFollowing ? 'Solo este' : 'Eliminar';
+    document.getElementById('confirm-series-btn').style.display = hasSeries ? '' : 'none';
+    document.getElementById('confirm-delete-btn').textContent = (hasFollowing || hasSeries) ? 'Solo este' : 'Eliminar';
   }
 }
 function closeModal(id) {
@@ -206,7 +209,7 @@ function closeModal(id) {
   el.classList.remove('on');
   el.style.zIndex = '';
   _modalZ = Math.max(999, _modalZ - 10);
-  if (id === 'confirm-modal') state.pendingDeleteFollowingFn = null;
+  if (id === 'confirm-modal') { state.pendingDeleteFollowingFn = null; state.pendingDeleteSeriesFn = null; }
 }
 
 function _enableSwipeToClose(modalEl) {
@@ -2892,8 +2895,9 @@ async function updateRecurring(kind, id, payload, pfx, until, label) {
 function askDeleteRecurring(kind, item, reload) {
   const label = kind === 'expenses' ? 'gasto' : 'ingreso';
   const recurring = item && (item.seriesId || (item.recurrence && item.recurrence !== 'NONE'));
+  const hasSeries = item && !!item.seriesId;
   document.getElementById('confirm-msg').textContent = recurring
-    ? `Este ${label} se repite. ¿Quieres eliminar solo el de este mes o también los de los meses siguientes?`
+    ? `Este ${label} se repite. ¿Quieres eliminar solo el de este mes, también los de los meses siguientes${hasSeries ? ', o todos los de la serie (pasados y futuros)' : ''}?`
     : `¿Eliminar este ${label}? Esta acción no se puede deshacer.`;
   const done = async msg => {
     showToast(msg);
@@ -2907,6 +2911,11 @@ function askDeleteRecurring(kind, item, reload) {
   };
   state.pendingDeleteFollowingFn = recurring ? async () => {
     const res = await api('DELETE', `/${kind}/${item.id}?scope=following`);
+    const n = res?.deleted ?? 0;
+    await done(`${n} ${label}${n === 1 ? '' : 's'} eliminado${n === 1 ? '' : 's'}`);
+  } : null;
+  state.pendingDeleteSeriesFn = hasSeries ? async () => {
+    const res = await api('DELETE', `/${kind}/${item.id}?scope=series`);
     const n = res?.deleted ?? 0;
     await done(`${n} ${label}${n === 1 ? '' : 's'} eliminado${n === 1 ? '' : 's'}`);
   } : null;
@@ -3374,10 +3383,13 @@ function askDeleteAccount(id) {
 /* ═══════════════════════════════════════════════════════════
    MODAL CONFIRMACIÓN
 ════════════════════════════════════════════════════════════════ */
-async function confirmDelete(following = false) {
-  const fn = following ? state.pendingDeleteFollowingFn : state.pendingDeleteFn;
+async function confirmDelete(scope = 'single') {
+  const fn = scope === 'series' ? state.pendingDeleteSeriesFn
+    : scope === 'following' ? state.pendingDeleteFollowingFn
+    : state.pendingDeleteFn;
   if (!fn) return;
-  const btn = document.getElementById(following ? 'confirm-following-btn' : 'confirm-delete-btn');
+  const btnId = scope === 'series' ? 'confirm-series-btn' : scope === 'following' ? 'confirm-following-btn' : 'confirm-delete-btn';
+  const btn = document.getElementById(btnId);
   const label = btn.textContent;
   btn.disabled = true; btn.textContent = 'Eliminando…';
   try {
