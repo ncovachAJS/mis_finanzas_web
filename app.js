@@ -831,11 +831,26 @@ async function loadAnnualDashboard() {
   }
 }
 
+// Ahorro real desde enero hasta el mes en curso (incluido), con el mismo
+// criterio que el gráfico de abajo: meses ya cerrados = ahorro real (pagado),
+// mes en curso = previsto (ingresos - gastos totales, no solo lo ya pagado).
+function accumulatedSavingsToDate(months, year) {
+  if (!months || !months.length) return 0;
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const isFutureYear = year > currentYear;
+  const curMonth = year === currentYear ? now.getMonth() + 1 : (isFutureYear ? 0 : 12);
+  const pastMonths = months.filter(m => m.month < curMonth);
+  const curMonthData = months.find(m => m.month === curMonth);
+  const total = pastMonths.reduce((s, m) => s + m.savings, 0);
+  return curMonthData ? total + (curMonthData.totalIncomes - curMonthData.totalExpenses) : total;
+}
+
 function renderAnnualDashboard(data) {
   const totalInc = data.yearPaidIncomes  ?? 0;
   const totalExp = data.yearPaidExpenses ?? 0;
   const priorSavings = data.priorYearsSavings ?? 0;
-  const savings  = priorSavings + (data.accumulatedSavings ?? 0);
+  const savings  = priorSavings + accumulatedSavingsToDate(data.months, state.dashYear);
   const pos = savings >= 0;
 
   const totalForBar = totalInc + totalExp;
