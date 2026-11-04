@@ -143,6 +143,7 @@ const state = {
   pendingBackupCodes: null,
   pendingDeleteFollowingFn: null,
   pendingDeleteSeriesFn: null,
+  _deleteModalToken: 0,
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -209,7 +210,7 @@ function closeModal(id) {
   el.classList.remove('on');
   el.style.zIndex = '';
   _modalZ = Math.max(999, _modalZ - 10);
-  if (id === 'confirm-modal') { state.pendingDeleteFollowingFn = null; state.pendingDeleteSeriesFn = null; }
+  if (id === 'confirm-modal') { state.pendingDeleteFollowingFn = null; state.pendingDeleteSeriesFn = null; state._deleteModalToken++; }
 }
 
 function _enableSwipeToClose(modalEl) {
@@ -2894,8 +2895,12 @@ async function updateRecurring(kind, id, payload, pfx, until, label) {
 /** Borrar solo este o también los siguientes, si es recurrente. */
 function askDeleteRecurring(kind, item, reload) {
   const label = kind === 'expenses' ? 'gasto' : 'ingreso';
+  // "Se repite" por serie/recurrencia explícita, o (caso de copias antiguas sin
+  // seriesId) porque hay gastos/ingresos del mismo nombre en meses siguientes;
+  // esto último se confirma con el backend justo debajo, sin bloquear el modal.
   const recurring = item && (item.seriesId || (item.recurrence && item.recurrence !== 'NONE'));
   const hasSeries = item && !!item.seriesId;
+  const myDeleteToken = ++state._deleteModalToken;
   document.getElementById('confirm-msg').textContent = recurring
     ? `Este ${label} se repite. ¿Quieres eliminar solo el de este mes, también los de los meses siguientes${hasSeries ? ', o todos los de la serie (pasados y futuros)' : ''}?`
     : `¿Eliminar este ${label}? Esta acción no se puede deshacer.`;
@@ -2920,6 +2925,27 @@ function askDeleteRecurring(kind, item, reload) {
     await done(`${n} ${label}${n === 1 ? '' : 's'} eliminado${n === 1 ? '' : 's'}`);
   } : null;
   openModal('confirm-modal');
+
+  // Copias antiguas (p. ej. de "Copiar mes" antes de enlazarlas con seriesId) no
+  // tienen seriesId ni recurrencia, así que el backend se consulta aparte para
+  // saber si hay meses siguientes con el mismo nombre que también se podrían borrar.
+  if (!recurring && item?.id) {
+    api('GET', `/${kind}/${item.id}/following-count`).then(res => {
+      if (myDeleteToken !== state._deleteModalToken) return; // el modal ya cambió de ítem o se cerró
+      const n = res?.count ?? 0;
+      if (n <= 0) return;
+      document.getElementById('confirm-msg').textContent =
+        `Este ${label} también existe en ${n} mes${n === 1 ? '' : 'es'} más adelante. ¿Quieres eliminar solo el de este mes o también los siguientes?`;
+      state.pendingDeleteFollowingFn = async () => {
+        const res2 = await api('DELETE', `/${kind}/${item.id}?scope=following`);
+        const n2 = res2?.deleted ?? 0;
+        await done(`${n2} ${label}${n2 === 1 ? '' : 's'} eliminado${n2 === 1 ? '' : 's'}`);
+      };
+      const followingBtn = document.getElementById('confirm-following-btn');
+      followingBtn.style.display = '';
+      document.getElementById('confirm-delete-btn').textContent = 'Solo este';
+    }).catch(() => {});
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
