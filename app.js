@@ -114,6 +114,7 @@ const state = {
   month: new Date().getMonth() + 1,
   year:  new Date().getFullYear(),
   dashYear: new Date().getFullYear(),
+  pendingYearJump: false, // true tras cambiar de año en Resumen: salta a enero de ese año al ir a Gastos/Ingresos
   accounts:  [],
   expenses:  [],
   incomes:   [],
@@ -653,6 +654,14 @@ function showTab(tab) {
   document.getElementById('tab-' + tab).classList.add('on');
   document.getElementById('view-' + tab).classList.add('on');
   activeTab = tab;
+  if ((tab === 'gastos' || tab === 'ingresos') && state.pendingYearJump) {
+    state.pendingYearJump = false;
+    state.month = 1;
+    state.year = state.dashYear;
+    updateMonthLabels();
+    populateMonthSelects();
+    Promise.all([loadGastos(), loadIngresos()]);
+  }
   if (tab === 'dashboard') loadDashboard();
   if (tab === 'shared') loadSharedExpenses();
 }
@@ -698,6 +707,7 @@ async function changeMonth(delta) {
 
 function changeYear(delta) {
   state.dashYear += delta;
+  state.pendingYearJump = true;
   document.getElementById('year-label').textContent = state.dashYear;
   loadAnnualDashboard();
 }
