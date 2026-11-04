@@ -3977,6 +3977,67 @@ function reloadSharedCurrentView() {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   PULL TO REFRESH (Resumen)
+════════════════════════════════════════════════════════════════ */
+(function initPullToRefresh() {
+  const main = document.querySelector('.main');
+  const indicator = document.getElementById('ptr-indicator');
+  const spinner = indicator?.querySelector('.ptr-spinner');
+  if (!main || !indicator || !spinner) return;
+  const THRESHOLD = 68;
+  let startY = 0, pulling = false, dragging = false, refreshing = false;
+
+  main.addEventListener('touchstart', (e) => {
+    pulling = activeTab === 'dashboard' && !refreshing && main.scrollTop <= 0;
+    dragging = false;
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+
+  main.addEventListener('touchmove', (e) => {
+    if (!pulling || refreshing) return;
+    if (main.scrollTop > 0) { pulling = false; return; }
+    const dy = e.touches[0].clientY - startY;
+    if (dy <= 0) return;
+    dragging = true;
+    const dist = Math.min(dy * 0.5, 90);
+    indicator.classList.add('visible');
+    indicator.style.transform = `translate(-50%, ${dist}px)`;
+    indicator.style.opacity = String(Math.min(dist / THRESHOLD, 1));
+    if (e.cancelable) e.preventDefault();
+  }, { passive: false });
+
+  main.addEventListener('touchend', async () => {
+    if (!pulling) return;
+    pulling = false;
+    indicator.classList.remove('visible');
+    const m = /translate\(-50%,\s*([\d.]+)px\)/.exec(indicator.style.transform);
+    const dist = m ? parseFloat(m[1]) : 0;
+    if (!(dragging && dist >= THRESHOLD)) {
+      indicator.style.transform = 'translate(-50%, -60px)';
+      indicator.style.opacity = '0';
+      dragging = false;
+      return;
+    }
+    dragging = false;
+    refreshing = true;
+    indicator.style.transform = 'translate(-50%, 54px)';
+    indicator.style.opacity = '1';
+    spinner.classList.add('spin');
+    try {
+      await loadDashboard();
+      if (document.getElementById('dash-anual')?.style.display !== 'none') {
+        await loadAnnualDashboard();
+      }
+    } catch(e) { /* loadDashboard ya gestiona su propio error */ }
+    await new Promise(r => setTimeout(r, 250));
+    spinner.classList.remove('spin');
+    indicator.style.transform = 'translate(-50%, -60px)';
+    indicator.style.opacity = '0';
+    refreshing = false;
+  });
+})();
+
+/* ═══════════════════════════════════════════════════════════
    CLOSE MODAL ON BACKDROP CLICK
 ════════════════════════════════════════════════════════════════ */
 document.querySelectorAll('.modal').forEach(m => {
