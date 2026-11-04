@@ -3851,6 +3851,45 @@ async function deleteSharedGroup(id) {
   } catch(e) { showToast(e.message, 'error'); }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   COPIAR MES A OTRO AÑO
+════════════════════════════════════════════════════════════════ */
+function openCopyMonthModal() {
+  document.getElementById('copy-month-source').textContent = `${MONTHS[state.month - 1]} ${state.year}`;
+  document.getElementById('copy-month-toyear').value = state.year + 1;
+  document.querySelectorAll('#copy-month-what .fbtn').forEach(b => b.classList.add('on'));
+  openModal('copy-month-modal');
+}
+
+function toggleCopyMonthWhat(btn) {
+  const all = document.querySelectorAll('#copy-month-what .fbtn');
+  if (btn.classList.contains('on') && [...all].filter(b => b.classList.contains('on')).length === 1) return;
+  btn.classList.toggle('on');
+}
+
+async function saveCopyMonth() {
+  const btns = [...document.querySelectorAll('#copy-month-what .fbtn')];
+  const wantExpenses = btns.find(b => b.dataset.what === 'expenses').classList.contains('on');
+  const wantIncomes  = btns.find(b => b.dataset.what === 'incomes').classList.contains('on');
+  const toYear = parseInt(document.getElementById('copy-month-toyear').value, 10);
+  if (!toYear || toYear < 2000 || toYear > 2100) { showToast('Año no válido', 'error'); return; }
+  const btn = document.getElementById('copy-month-save-btn');
+  btn.disabled = true; btn.textContent = 'Copiando…';
+  try {
+    const payload = { fromMonth: state.month, fromYear: state.year, toYear };
+    let total = 0;
+    if (wantExpenses) { const r = await api('POST', '/expenses/copy-month', payload); total += r?.created ?? 0; }
+    if (wantIncomes)  { const r = await api('POST', '/incomes/copy-month', payload);  total += r?.created ?? 0; }
+    closeModal('copy-month-modal');
+    if (total > 0) showToast(`${total} elemento${total === 1 ? '' : 's'} copiados a los 12 meses de ${toYear}`, 'success');
+    else showToast('No había nada que copiar en ese mes', 'error');
+  } catch(e) {
+    showToast(e.message || 'Error al copiar', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Copiar';
+  }
+}
+
 function populateGroupSelect(selectId) {
   const sel = document.getElementById(selectId);
   if (!sel) return;

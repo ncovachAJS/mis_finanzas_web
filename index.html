@@ -11,7 +11,7 @@
   <script src="config.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=20261104d">
+  <link rel="stylesheet" href="styles.css?v=20261104e">
 </head>
 <body>
 
@@ -293,6 +293,9 @@
   <div class="section-hdr">
     <h2>Gastos</h2>
     <div class="hdr-actions">
+      <button class="icon-btn" onclick="openCopyMonthModal()" title="Copiar mes a otro año">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      </button>
       <button class="icon-btn" onclick="exportPDF('gastos')" title="Exportar PDF">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><polyline points="15 2 15 7 20 7"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
       </button>
@@ -357,6 +360,9 @@
   <div class="section-hdr">
     <h2>Ingresos</h2>
     <div class="hdr-actions">
+      <button class="icon-btn" onclick="openCopyMonthModal()" title="Copiar mes a otro año">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      </button>
       <button class="icon-btn" onclick="exportPDF('ingresos')" title="Exportar PDF">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><polyline points="15 2 15 7 20 7"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
       </button>
@@ -724,6 +730,34 @@
   </div>
 </div>
 
+<!-- Modal Copiar mes a otro año -->
+<div class="modal" id="copy-month-modal">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Copiar mes</div>
+    <div class="fld">
+      <label>Qué copiar</label>
+      <div class="fbar" id="copy-month-what">
+        <button type="button" class="fbtn on" data-what="expenses" onclick="toggleCopyMonthWhat(this)">Gastos</button>
+        <button type="button" class="fbtn on" data-what="incomes" onclick="toggleCopyMonthWhat(this)">Ingresos</button>
+      </div>
+    </div>
+    <div class="fld">
+      <label>Mes de origen</label>
+      <div id="copy-month-source" style="font-weight:600;font-size:15px"></div>
+    </div>
+    <div class="fld">
+      <label>Año destino <span class="req">*</span></label>
+      <input type="number" id="copy-month-toyear" min="2000" max="2100" step="1">
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:-6px">Se copiarán a los 12 meses de ese año, todos como pendientes.</div>
+    <div class="modal-btns">
+      <button class="btn-s" onclick="closeModal('copy-month-modal')">Cancelar</button>
+      <button class="btn-p" onclick="saveCopyMonth()" id="copy-month-save-btn">Copiar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Liquidar deuda -->
 <div class="modal" id="settle-modal">
   <div class="modal-box">
@@ -1034,6 +1068,6 @@
 
 <div id="print-area"></div>
 
-<script src="app.js?v=20261104d"></script>
+<script src="app.js?v=20261104e"></script>
 </body>
 </html>
