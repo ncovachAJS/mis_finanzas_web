@@ -4001,16 +4001,19 @@ function reloadSharedCurrentView() {
   if (!main || !indicator || !spinner) return;
   const THRESHOLD = 68;
   let startY = 0, pulling = false, dragging = false, refreshing = false;
+  // .main no hace scroll propio (no tiene overflow), el scroll real es el de
+  // la página, así que hay que mirar el scroll del documento, no el de .main.
+  const scrollTop = () => (document.scrollingElement || document.documentElement).scrollTop;
 
   main.addEventListener('touchstart', (e) => {
-    pulling = activeTab === 'dashboard' && !refreshing && main.scrollTop <= 0;
+    pulling = activeTab === 'dashboard' && !refreshing && scrollTop() <= 0;
     dragging = false;
     startY = e.touches[0].clientY;
   }, { passive: true });
 
   main.addEventListener('touchmove', (e) => {
     if (!pulling || refreshing) return;
-    if (main.scrollTop > 0) { pulling = false; return; }
+    if (scrollTop() > 0) { pulling = false; return; }
     const dy = e.touches[0].clientY - startY;
     if (dy <= 0) return;
     dragging = true;
