@@ -893,12 +893,18 @@ function renderMonthlySavings(months, year, priorSavings = 0) {
   // For a future year all months are projected; for a past year all are real
   const curMonth = isCurrentYear ? now.getMonth() + 1 : (isFutureYear ? 0 : 12);
 
-  const realMonths   = months.filter(m => m.month <= curMonth);
+  // Meses ya cerrados del todo (antes del actual): el ahorro real es fiable.
+  // El mes en curso todavía no ha terminado de pagarse/cobrarse, así que se
+  // trata como "previsto" (total ingresos - total gastos del mes), igual que
+  // los meses futuros, en vez de solo lo ya marcado como pagado hasta ahora.
+  const pastMonths   = months.filter(m => m.month <  curMonth);
+  const curMonthData = months.find(m => m.month === curMonth);
   const futureMonths = months.filter(m => m.month >  curMonth);
-  if (!realMonths.length && !isFutureYear) return '';
+  const realMonths   = pastMonths;
+  if (!realMonths.length && !curMonthData && !isFutureYear) return '';
 
-  // For future months: use total (incomes - expenses) regardless of paid status,
-  // because propagated items are pending and savings (paid only) = 0.
+  // Para el mes en curso y los futuros: total (ingresos - gastos) sin importar
+  // si ya está pagado, porque lo pendiente de cobrar/pagar también cuenta.
   const futureSaving = m => m.totalIncomes - m.totalExpenses;
 
   // Fallback avg from past months when a future month has no data at all
@@ -907,7 +913,8 @@ function renderMonthlySavings(months, year, priorSavings = 0) {
     ? activeMonths.reduce((s, m) => s + m.savings, 0) / activeMonths.length
     : 0;
 
-  const realTotal  = realMonths.reduce((s, m) => s + m.savings, 0);
+  const realTotal = realMonths.reduce((s, m) => s + m.savings, 0)
+    + (curMonthData ? futureSaving(curMonthData) : 0);
   const projTotal  = futureMonths.reduce((s, m) => {
     const hasDat = m.totalIncomes > 0 || m.totalExpenses > 0;
     return s + (hasDat ? futureSaving(m) : avgSaving);
@@ -918,6 +925,7 @@ function renderMonthlySavings(months, year, priorSavings = 0) {
 
   const allSavings = [
     ...realMonths.map(m => Math.abs(m.savings)),
+    ...(curMonthData ? [Math.abs(futureSaving(curMonthData))] : []),
     ...futureMonths.map(m => {
       const hasDat = m.totalIncomes > 0 || m.totalExpenses > 0;
       return Math.abs(hasDat ? futureSaving(m) : avgSaving);
@@ -926,11 +934,11 @@ function renderMonthlySavings(months, year, priorSavings = 0) {
   const maxAbs = Math.max(...allSavings, 1);
 
   // Acumulado desde enero hasta ese mes (incluido), con el mismo criterio que la barra:
-  // real para los meses ya pasados, proyectado para los que faltan.
+  // real para los meses ya cerrados, previsto para el actual y los que faltan.
   let running = priorSavings;
-  const makeRow = (m, isFuture) => {
+  const makeRow = (m, isFuture, forceProjected) => {
     const hasDat = m.totalIncomes > 0 || m.totalExpenses > 0;
-    const saving = isFuture ? (hasDat ? futureSaving(m) : avgSaving) : m.savings;
+    const saving = (isFuture || forceProjected) ? (hasDat ? futureSaving(m) : avgSaving) : m.savings;
     const isEst  = isFuture && !hasDat;   // estimated via avg, no real data
     const pos    = saving >= 0;
     const pct    = Math.min(Math.abs(saving) / maxAbs * 100, 100);
@@ -950,10 +958,11 @@ function renderMonthlySavings(months, year, priorSavings = 0) {
   };
 
   const rows = [
-    ...realMonths.map(m => makeRow(m, false)),
+    ...realMonths.map(m => makeRow(m, false, false)),
+    ...(curMonthData ? [makeRow(curMonthData, false, true)] : []),
     ...(futureMonths.length ? [
       `<div class="sv-divider"><span>Proyección</span></div>`,
-      ...futureMonths.map(m => makeRow(m, true)),
+      ...futureMonths.map(m => makeRow(m, true, false)),
     ] : []),
   ].join('');
 
