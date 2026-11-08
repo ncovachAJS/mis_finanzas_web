@@ -845,19 +845,21 @@ async function loadAnnualDashboard() {
   }
 }
 
-// Ahorro real desde enero hasta el mes en curso (incluido), con el mismo
-// criterio que el gráfico de abajo: meses ya cerrados = ahorro real (pagado),
-// mes en curso = previsto (ingresos - gastos totales, no solo lo ya pagado).
+// Ahorro real desde enero hasta el mes en curso (incluido): siempre ingresos
+// menos gastos totales de cada mes, esté o no marcado como pagado/cobrado.
+// Antes los meses ya cerrados usaban solo lo pagado, así que un gasto de un
+// mes pasado que nunca se marcó como pagado no restaba aquí pero sí restaba
+// al calcular lo que ese año arrastra al siguiente (priorYearsSavings), y los
+// dos números dejaban de cuadrar entre sí.
 function accumulatedSavingsToDate(months, year) {
   if (!months || !months.length) return 0;
   const now = new Date();
   const currentYear = now.getFullYear();
   const isFutureYear = year > currentYear;
   const curMonth = year === currentYear ? now.getMonth() + 1 : (isFutureYear ? 0 : 12);
-  const pastMonths = months.filter(m => m.month < curMonth);
-  const curMonthData = months.find(m => m.month === curMonth);
-  const total = pastMonths.reduce((s, m) => s + m.savings, 0);
-  return curMonthData ? total + (curMonthData.totalIncomes - curMonthData.totalExpenses) : total;
+  return months
+    .filter(m => m.month <= curMonth)
+    .reduce((s, m) => s + (m.totalIncomes - m.totalExpenses), 0);
 }
 
 function renderAnnualDashboard(data) {
@@ -922,27 +924,24 @@ function renderMonthlySavings(months, year, priorSavings = 0) {
   // For a future year all months are projected; for a past year all are real
   const curMonth = isCurrentYear ? now.getMonth() + 1 : (isFutureYear ? 0 : 12);
 
-  // Meses ya cerrados del todo (antes del actual): el ahorro real es fiable.
-  // El mes en curso todavía no ha terminado de pagarse/cobrarse, así que se
-  // trata como "previsto" (total ingresos - total gastos del mes), igual que
-  // los meses futuros, en vez de solo lo ya marcado como pagado hasta ahora.
   const pastMonths   = months.filter(m => m.month <  curMonth);
   const curMonthData = months.find(m => m.month === curMonth);
   const futureMonths = months.filter(m => m.month >  curMonth);
   const realMonths   = pastMonths;
   if (!realMonths.length && !curMonthData && !isFutureYear) return '';
 
-  // Para el mes en curso y los futuros: total (ingresos - gastos) sin importar
-  // si ya está pagado, porque lo pendiente de cobrar/pagar también cuenta.
+  // Todo mes (pasado, actual o futuro) cuenta ingresos - gastos totales, esté o
+  // no marcado como pagado/cobrado: lo pendiente también cuenta, y así este
+  // acumulado siempre cuadra con lo que un año arrastra al siguiente.
   const futureSaving = m => m.totalIncomes - m.totalExpenses;
 
   // Fallback avg from past months when a future month has no data at all
   const activeMonths = realMonths.filter(m => m.totalIncomes > 0 || m.totalExpenses > 0);
   const avgSaving    = activeMonths.length
-    ? activeMonths.reduce((s, m) => s + m.savings, 0) / activeMonths.length
+    ? activeMonths.reduce((s, m) => s + futureSaving(m), 0) / activeMonths.length
     : 0;
 
-  const realTotal = realMonths.reduce((s, m) => s + m.savings, 0)
+  const realTotal = realMonths.reduce((s, m) => s + futureSaving(m), 0)
     + (curMonthData ? futureSaving(curMonthData) : 0);
   const projTotal  = futureMonths.reduce((s, m) => {
     const hasDat = m.totalIncomes > 0 || m.totalExpenses > 0;
@@ -953,7 +952,7 @@ function renderMonthlySavings(months, year, priorSavings = 0) {
   const totPos = annualTotal >= 0;
 
   const allSavings = [
-    ...realMonths.map(m => Math.abs(m.savings)),
+    ...realMonths.map(m => Math.abs(futureSaving(m))),
     ...(curMonthData ? [Math.abs(futureSaving(curMonthData))] : []),
     ...futureMonths.map(m => {
       const hasDat = m.totalIncomes > 0 || m.totalExpenses > 0;
@@ -967,7 +966,7 @@ function renderMonthlySavings(months, year, priorSavings = 0) {
   let running = priorSavings;
   const makeRow = (m, isFuture, forceProjected) => {
     const hasDat = m.totalIncomes > 0 || m.totalExpenses > 0;
-    const saving = (isFuture || forceProjected) ? (hasDat ? futureSaving(m) : avgSaving) : m.savings;
+    const saving = hasDat ? futureSaving(m) : ((isFuture || forceProjected) ? avgSaving : 0);
     const isEst  = isFuture && !hasDat;   // estimated via avg, no real data
     const pos    = saving >= 0;
     const pct    = Math.min(Math.abs(saving) / maxAbs * 100, 100);
