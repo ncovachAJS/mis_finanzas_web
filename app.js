@@ -31,6 +31,7 @@ const FICO = {
   trash:   '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
   check:   '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
   undo:    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 7"/></svg>',
+  back:    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
   refresh: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
 };
 
@@ -4073,7 +4074,7 @@ function renderSharedGroupsList() {
     ? `<div class="empty" style="padding:24px 8px"><div class="empty-ico">✈️</div><h3>Sin grupos</h3><p>Crea un grupo (ej. un viaje) para empezar a añadir gastos.</p></div>` : '';
 
   el.innerHTML = `
-    <button class="btn-s" onclick="loadSharedExpenses()" style="margin-bottom:12px">${FICO.undo} Volver</button>
+    <button class="btn-s" onclick="loadSharedExpenses()" style="margin-bottom:12px">${FICO.back} Volver</button>
     <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Compartido con ${esc(partnerName)}. Organiza los gastos compartidos en grupos (ej. un viaje).</p>
     ${rows}${empty}
     <button class="add-btn" style="width:100%;justify-content:center;margin-top:6px" onclick="openNewGroupModal()">＋ Nuevo grupo</button>
@@ -4096,7 +4097,7 @@ function renderSharedFeed() {
     : state.sharedItems.map(it => sharedItemRow(it, partnerName, false)).join('');
 
   el.innerHTML = `
-    <button class="btn-s" onclick="loadSharedExpenses()" style="margin-bottom:12px">${FICO.undo} Volver</button>
+    <button class="btn-s" onclick="loadSharedExpenses()" style="margin-bottom:12px">${FICO.back} Volver</button>
     <div class="balance-hero ${heroClass}">
       <div class="balance-hero-label">${heroText}</div>
       <div class="balance-hero-amount">${bal === 0 ? '0,00 €' : abs}</div>
