@@ -1032,14 +1032,15 @@ async function loadInsights() {
     let prevMonth = curMonth - 1, prevYear = curYear;
     if (prevMonth < 1) { prevMonth = 12; prevYear--; }
 
-    const [curStats, prevStats, curExpenses, prevExpenses] = await Promise.all([
+    const [curStats, prevStats, curExpenses, prevExpenses, yearData] = await Promise.all([
       api('GET', `/dashboard/month?month=${curMonth}&year=${curYear}`),
       api('GET', `/dashboard/month?month=${prevMonth}&year=${prevYear}`),
       api('GET', `/expenses?month=${curMonth}&year=${curYear}`),
       api('GET', `/expenses?month=${prevMonth}&year=${prevYear}`),
+      api('GET', `/dashboard/year/${curYear}`),
     ]);
     if (!curStats) return;
-    renderInsights({ curMonth, curYear, prevMonth, prevYear, curStats, prevStats, curExpenses: curExpenses || [], prevExpenses: prevExpenses || [] });
+    renderInsights({ curMonth, curYear, prevMonth, prevYear, curStats, prevStats, curExpenses: curExpenses || [], prevExpenses: prevExpenses || [], yearData });
   } catch(e) {
     el.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><h3>Error</h3><p>${e.message}</p></div>`;
   }
@@ -1130,9 +1131,99 @@ function renderInsights(d) {
       <div class="scard"><div class="snum ${curSaving >= 0 ? 'c-income' : 'c-expense'}" style="font-size:18px">${curSaving >= 0 ? '+' : ''}${fmtEur(curSaving)}</div><div class="slbls">Ahorro</div></div>
     </div>
 
+    ${renderSavingsGoalCard(curSaving)}
+    ${renderAccumulatedCard(d.yearData, d.curYear)}
+
     <div class="chart-title" style="margin-bottom:10px">Avisos</div>
     ${avisosHtml}
   `;
+}
+
+/** Tarjeta "Objetivo": compara lo ahorrado este mes con el objetivo de ahorro mensual del perfil. */
+function renderSavingsGoalCard(curSaving) {
+  const goal = state.user?.monthlySavingsGoal;
+  if (!goal) {
+    return `
+      <div class="insight-goal-card">
+        <div class="insight-goal-hdr"><span>Objetivo de ahorro</span></div>
+        <p style="font-size:13px;color:var(--muted);margin:6px 0 10px">Aún no has definido cuánto quieres ahorrar cada mes.</p>
+        <button class="btn-s" onclick="openProfileModal(); showProfileTab('cuenta'); document.getElementById('p-savings-goal').focus()">Definir objetivo</button>
+      </div>`;
+  }
+  const diff = curSaving - goal;
+  const pct = Math.max(0, Math.min(100, (curSaving / goal) * 100));
+  const over = diff >= 0;
+  return `
+    <div class="insight-goal-card">
+      <div class="insight-goal-hdr"><span>Objetivo de ahorro</span></div>
+      <div class="insight-goal-row">
+        <span>Quieres tener ahorrados</span>
+        <span class="insight-goal-amount">${fmtEur(goal)}</span>
+      </div>
+      <div class="insight-goal-bar"><div class="insight-goal-bar-fill ${over ? '' : 'short'}" style="width:${pct.toFixed(1)}%"></div></div>
+      <div class="insight-goal-row" style="margin-top:10px">
+        <span>Llevas</span>
+        <span class="insight-goal-amount ${over ? 'c-income' : 'c-expense'}">${over ? '+' : ''}${fmtEur(diff)}</span>
+      </div>
+      <div class="insight-goal-note">
+        ${over
+          ? `Vas ${fmtEur(diff)} por delante de tu objetivo este mes.`
+          : `Te faltan ${fmtEur(Math.abs(diff))} para llegar a tu objetivo este mes.`}
+      </div>
+    </div>`;
+}
+
+/** Tarjeta de ahorro acumulado del año, con gráfico de evolución mes a mes. */
+function renderAccumulatedCard(yearData, year) {
+  if (!yearData || !yearData.months) return '';
+  const priorSavings = yearData.priorYearsSavings ?? 0;
+  const ytd = accumulatedSavingsToDate(yearData.months, year);
+  const total = priorSavings + ytd;
+  const pos = total >= 0;
+  const ytdPos = ytd >= 0;
+
+  const now = new Date();
+  const curMonth = year === now.getFullYear() ? now.getMonth() + 1 : 12;
+  let running = priorSavings;
+  const points = [running];
+  for (let m = 1; m <= curMonth; m++) {
+    const mData = yearData.months.find(x => x.month === m);
+    running += mData ? (mData.totalIncomes - mData.totalExpenses) : 0;
+    points.push(running);
+  }
+
+  return `
+    <div class="insight-goal-card">
+      <div class="insight-goal-hdr"><span>Ahorro acumulado</span></div>
+      <div class="insight-networth-amount ${pos ? 'c-income' : 'c-expense'}">${pos ? '+' : ''}${fmtEur(total)}</div>
+      <div class="insight-goal-row" style="margin-top:4px">
+        <span>Desde enero</span>
+        <span class="${ytdPos ? 'c-income' : 'c-expense'}">${ytdPos ? '+' : ''}${fmtEur(ytd)} ${ytdPos ? '▲' : '▼'}</span>
+      </div>
+      ${renderAreaChart(points)}
+      <div class="insight-goal-row" style="margin-top:2px">
+        <span>Ene ${year}: ${fmtEur(priorSavings)}</span>
+        <span>${MONTHS_SHORT[curMonth - 1]} ${year}</span>
+      </div>
+    </div>`;
+}
+
+/** Gráfico de área simple a partir de una serie de valores acumulados. */
+function renderAreaChart(points) {
+  if (!points || points.length < 2) return '';
+  const W = 600, H = 110;
+  const minV = Math.min(...points, 0);
+  const maxV = Math.max(...points, 0);
+  const range = (maxV - minV) || 1;
+  const stepX = W / (points.length - 1);
+  const toY = v => H - ((v - minV) / range) * H;
+  const coords = points.map((v, i) => [i * stepX, toY(v)]);
+  const linePath = 'M' + coords.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' L');
+  const areaPath = `${linePath} L${W},${H} L0,${H} Z`;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;margin-top:10px;display:block">
+    <path d="${areaPath}" fill="#e8c54530" stroke="none"/>
+    <path d="${linePath}" fill="none" stroke="#e8c545" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>`;
 }
 
 function renderBarChart(months) {
@@ -2503,6 +2594,7 @@ function openProfileModal() {
     document.getElementById('p-name').value  = u.name || '';
     document.getElementById('p-email').value = u.email || '';
     document.getElementById('p-budget').value = u.monthlyBudget || '';
+    document.getElementById('p-savings-goal').value = u.monthlySavingsGoal || '';
   }
   document.getElementById('p-cur-pass').value = '';
   document.getElementById('p-new-pass').value = '';
@@ -2858,15 +2950,17 @@ async function onAvatarChange(input) {
 async function saveProfile() {
   const name   = document.getElementById('p-name').value.trim();
   const budget = parseFloat(document.getElementById('p-budget').value);
+  const savingsGoal = parseFloat(document.getElementById('p-savings-goal').value);
   const payload = {};
   if (name) payload.name = name;
   payload.monthlyBudget = isNaN(budget) || budget <= 0 ? null : budget;
+  payload.monthlySavingsGoal = isNaN(savingsGoal) || savingsGoal <= 0 ? null : savingsGoal;
   const btn = document.getElementById('p-save-btn');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
     const data = await api('PATCH', '/auth/profile', payload);
     if (data) {
-      state.user = { ...state.user, name: data.name ?? state.user.name, monthlyBudget: data.monthlyBudget };
+      state.user = { ...state.user, name: data.name ?? state.user.name, monthlyBudget: data.monthlyBudget, monthlySavingsGoal: data.monthlySavingsGoal };
       localStorage.setItem('finanzas_user', JSON.stringify(state.user));
       document.getElementById('hdr-user').textContent = state.user.name?.split(' ')[0] ?? '';
     }

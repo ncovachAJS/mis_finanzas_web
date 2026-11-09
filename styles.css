@@ -193,6 +193,16 @@ input[type=date]{color-scheme:light}
 .insight-card.bad{border-left-color:var(--expense)}
 .insight-ico{font-size:20px;flex-shrink:0}
 .insight-text{font-size:13.5px;font-weight:500;color:var(--text);line-height:1.4}
+
+.insight-goal-card{background:var(--surface);border:1.5px solid var(--border-l);border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 1px 6px rgba(0,0,0,.06),0 4px 20px rgba(0,0,0,.04)}
+.insight-goal-hdr{font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px}
+.insight-goal-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted)}
+.insight-goal-amount{font-size:15px;font-weight:700;color:var(--text);font-family:'DM Sans',sans-serif}
+.insight-goal-bar{height:8px;border-radius:5px;background:var(--border-l);overflow:hidden;margin-top:8px}
+.insight-goal-bar-fill{height:100%;border-radius:5px;background:var(--income);transition:width .3s}
+.insight-goal-bar-fill.short{background:#e8b545}
+.insight-goal-note{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-top:10px;line-height:1.4}
+.insight-networth-amount{font-family:'DM Sans',sans-serif;font-weight:700;font-size:28px;letter-spacing:-.02em;margin-bottom:2px}
 .chart-legend{display:flex;gap:14px;margin-top:8px;flex-wrap:wrap}
 .chart-legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);width:100%}
 .chart-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
