@@ -281,6 +281,12 @@ input[type=date]{color-scheme:light}
 .group-hdr-label{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);flex:1}
 .group-hdr-total{font-size:15px;font-weight:600;color:var(--text);font-family:'DM Sans',sans-serif}
 
+.month-total-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-l)}
+.month-total-row:last-child{border-bottom:none}
+.month-total-label{font-size:13px;font-weight:600;color:var(--text);flex:1}
+.month-total-count{font-size:12px;color:var(--faint)}
+.month-total-amount{font-size:13px;font-weight:700;color:var(--text);font-family:'DM Sans',sans-serif;min-width:70px;text-align:right}
+
 /* ACCOUNT CARD */
 .account-card{background:var(--surface);border:none;border-radius:14px;padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 6px rgba(0,0,0,.06),0 4px 20px rgba(0,0,0,.05);transition:box-shadow .2s}
 .account-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.1)}

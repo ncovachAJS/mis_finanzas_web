@@ -111,6 +111,7 @@ const state = {
   editingSharedExpenseId: null,
   gastosCollapsedGroups: new Set(),
   sharedCollapsedGroups: new Set(),
+  sharedMonthlyOpen: true,
   month: new Date().getMonth() + 1,
   year:  new Date().getFullYear(),
   dashYear: new Date().getFullYear(),
@@ -3740,6 +3741,7 @@ function renderSharedOverview() {
       <button class="btn-s" onclick="openSettleModal()">Registrar pago</button>
     </div>
     <button class="btn-s" style="width:100%;margin-bottom:18px;justify-content:center" onclick="openGroupsManagement()">${catIconSvg('plane', 15)} Grupos (${state.sharedGroups.filter(g => g.id).length})</button>
+    ${renderSharedMonthlyTotals()}
     ${itemsHtml}
   `;
 }
@@ -3775,6 +3777,42 @@ function renderSharedGroupedSections(partnerName) {
 function toggleSharedGroupSection(key) {
   if (state.sharedCollapsedGroups.has(key)) state.sharedCollapsedGroups.delete(key);
   else state.sharedCollapsedGroups.add(key);
+  renderSharedOverview();
+}
+
+/** Recuento de lo gastado (importe total de los gastos, sin contar pagos/liquidaciones) cada mes. */
+function renderSharedMonthlyTotals() {
+  const buckets = new Map();
+  state.sharedItems.forEach(it => {
+    if (it.type === 'settlement') return;
+    const d = new Date(it.date);
+    const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
+    if (!buckets.has(key)) buckets.set(key, { year: d.getFullYear(), month: d.getMonth() + 1, total: 0, count: 0 });
+    const b = buckets.get(key);
+    b.total += it.amount;
+    b.count += 1;
+  });
+  if (!buckets.size) return '';
+  const rows = [...buckets.values()].sort((a, b) => (b.year * 12 + b.month) - (a.year * 12 + a.month));
+  const collapsed = !state.sharedMonthlyOpen;
+  const rowsHtml = rows.map(r => `
+    <div class="month-total-row">
+      <span class="month-total-label">${MONTHS[r.month - 1]} ${r.year}</span>
+      <span class="month-total-count">${r.count} gasto${r.count === 1 ? '' : 's'}</span>
+      <span class="month-total-amount">${fmtEur(r.total)}</span>
+    </div>`).join('');
+  return `
+    <div class="group-hdr" onclick="toggleSharedMonthlyTotals()" style="cursor:pointer">
+      <span class="group-hdr-chevron ${collapsed ? '' : 'open'}">▸</span>
+      <span class="group-hdr-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+      <span class="group-hdr-label">Gastado por mes</span>
+      <span class="group-hdr-total">${fmtEur(rows.reduce((s, r) => s + r.total, 0))}</span>
+    </div>
+    <div class="group-body" style="${collapsed ? 'display:none' : ''}">${rowsHtml}</div>`;
+}
+
+function toggleSharedMonthlyTotals() {
+  state.sharedMonthlyOpen = !state.sharedMonthlyOpen;
   renderSharedOverview();
 }
 
