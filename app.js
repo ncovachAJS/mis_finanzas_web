@@ -1206,15 +1206,15 @@ function toggleInsightsAccount(id) {
   if (state.lastInsightsData) renderInsights(state.lastInsightsData);
 }
 
-/** Tarjeta "Objetivo": compara lo ahorrado este mes con el objetivo de ahorro mensual del perfil. */
+/** Tarjeta "Ritmo de ahorro mensual": compara lo ahorrado este mes con el ritmo fijado en el perfil. */
 function renderSavingsGoalCard(curSaving) {
   const goal = state.user?.monthlySavingsGoal;
   if (!goal) {
     return `
       <div class="insight-goal-card">
-        <div class="insight-goal-hdr"><span>Objetivo de ahorro</span></div>
+        <div class="insight-goal-hdr"><span>Ritmo de ahorro mensual</span></div>
         <p style="font-size:13px;color:var(--muted);margin:6px 0 10px">Aún no has definido cuánto quieres ahorrar cada mes.</p>
-        <button class="btn-s" onclick="openProfileModal(); showProfileTab('cuenta'); document.getElementById('p-savings-goal').focus()">Definir objetivo</button>
+        <button class="btn-s" onclick="openProfileModal(); showProfileTab('cuenta'); document.getElementById('p-savings-goal').focus()">Definir ritmo</button>
       </div>`;
   }
   const diff = curSaving - goal;
@@ -1222,7 +1222,7 @@ function renderSavingsGoalCard(curSaving) {
   const over = diff >= 0;
   return `
     <div class="insight-goal-card">
-      <div class="insight-goal-hdr"><span>Objetivo de ahorro</span></div>
+      <div class="insight-goal-hdr"><span>Ritmo de ahorro mensual</span></div>
       <div class="insight-goal-row">
         <span>Quieres tener ahorrados</span>
         <span class="insight-goal-amount">${fmtEur(goal)}</span>
@@ -1234,8 +1234,8 @@ function renderSavingsGoalCard(curSaving) {
       </div>
       <div class="insight-goal-note">
         ${over
-          ? `Vas ${fmtEur(diff)} por delante de tu objetivo este mes.`
-          : `Te faltan ${fmtEur(Math.abs(diff))} para llegar a tu objetivo este mes.`}
+          ? `Vas ${fmtEur(diff)} por delante de tu ritmo de ahorro este mes.`
+          : `Te faltan ${fmtEur(Math.abs(diff))} para llegar a tu ritmo de ahorro este mes.`}
       </div>
     </div>`;
 }
