@@ -3780,27 +3780,41 @@ function toggleSharedGroupSection(key) {
   renderSharedOverview();
 }
 
-/** Recuento de lo gastado (importe total de los gastos, sin contar pagos/liquidaciones) cada mes. */
+/** Recuento de lo gastado (importe total de los gastos, sin contar pagos/liquidaciones) cada mes, desglosado por grupo. */
 function renderSharedMonthlyTotals() {
   const buckets = new Map();
   state.sharedItems.forEach(it => {
     if (it.type === 'settlement') return;
     const d = new Date(it.date);
     const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
-    if (!buckets.has(key)) buckets.set(key, { year: d.getFullYear(), month: d.getMonth() + 1, total: 0, count: 0 });
+    if (!buckets.has(key)) buckets.set(key, { year: d.getFullYear(), month: d.getMonth() + 1, total: 0, count: 0, groups: new Map() });
     const b = buckets.get(key);
     b.total += it.amount;
     b.count += 1;
+    const gKey = it.groupId || '__sin_grupo__';
+    if (!b.groups.has(gKey)) b.groups.set(gKey, { name: it.groupName || 'Sin grupo', total: 0 });
+    b.groups.get(gKey).total += it.amount;
   });
   if (!buckets.size) return '';
   const rows = [...buckets.values()].sort((a, b) => (b.year * 12 + b.month) - (a.year * 12 + a.month));
   const collapsed = !state.sharedMonthlyOpen;
-  const rowsHtml = rows.map(r => `
+  const multiGroup = state.sharedGroups.filter(g => g.id).length > 1;
+  const rowsHtml = rows.map(r => {
+    const groupLines = [...r.groups.values()]
+      .sort((a, b) => b.total - a.total)
+      .map(g => `
+        <div class="month-total-subrow">
+          <span class="month-total-sublabel">${esc(g.name)}</span>
+          <span class="month-total-subamount">${fmtEur(g.total)}</span>
+        </div>`).join('');
+    return `
     <div class="month-total-row">
       <span class="month-total-label">${MONTHS[r.month - 1]} ${r.year}</span>
       <span class="month-total-count">${r.count} gasto${r.count === 1 ? '' : 's'}</span>
       <span class="month-total-amount">${fmtEur(r.total)}</span>
-    </div>`).join('');
+    </div>
+    ${multiGroup ? groupLines : ''}`;
+  }).join('');
   return `
     <div class="group-hdr" onclick="toggleSharedMonthlyTotals()" style="cursor:pointer">
       <span class="group-hdr-chevron ${collapsed ? '' : 'open'}">▸</span>
