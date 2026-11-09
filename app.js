@@ -649,6 +649,19 @@ async function startApp() {
 
   // Fire all in parallel — backend cold-start hits once, not 5 times
   Promise.all([loadAccounts(), loadCategories(), loadDashboard(), loadGastos(), loadIngresos(), loadInvestments()]);
+  processAutoSavings();
+}
+
+/** Si hay una Cuenta Ahorro, añade como ingreso el ahorro de los meses ya cerrados pendientes de procesar. */
+async function processAutoSavings() {
+  try {
+    const res = await api('POST', '/accounts/process-auto-savings');
+    if (res?.created > 0) {
+      showToast(`Se añadió el ahorro de ${res.created} mes${res.created === 1 ? '' : 'es'} a tu Cuenta Ahorro`, 'success');
+      await Promise.all([loadAccounts(), loadGastos(), loadIngresos()]);
+      if (activeTab === 'dashboard') loadDashboard();
+    }
+  } catch(e) { /* no bloquea el resto de la app si falla */ }
 }
 
 /* ═══════════════════════════════════════════════════════════
