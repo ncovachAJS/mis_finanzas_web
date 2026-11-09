@@ -871,12 +871,19 @@ async function loadAnnualDashboard() {
 // mes pasado que nunca se marcó como pagado no restaba aquí pero sí restaba
 // al calcular lo que ese año arrastra al siguiente (priorYearsSavings), y los
 // dos números dejaban de cuadrar entre sí.
-function accumulatedSavingsToDate(months, year) {
+// uptoMonth: corta el acumulado en ese mes en vez de "hoy" (usado por el Dashboard,
+// que puede estar viendo un mes distinto al actual). Si se omite, usa el mes de hoy.
+function accumulatedSavingsToDate(months, year, uptoMonth) {
   if (!months || !months.length) return 0;
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const isFutureYear = year > currentYear;
-  const curMonth = year === currentYear ? now.getMonth() + 1 : (isFutureYear ? 0 : 12);
+  let curMonth;
+  if (uptoMonth != null) {
+    curMonth = uptoMonth;
+  } else {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const isFutureYear = year > currentYear;
+    curMonth = year === currentYear ? now.getMonth() + 1 : (isFutureYear ? 0 : 12);
+  }
   return months
     .filter(m => m.month <= curMonth)
     .reduce((s, m) => s + (m.totalIncomes - m.totalExpenses), 0);
@@ -1170,7 +1177,7 @@ function renderInsights(d) {
     </div>
 
     ${renderSavingsGoalCard(curSaving)}
-    ${renderAccumulatedCard(d.yearData, d.curYear)}
+    ${renderAccumulatedCard(d.yearData, d.curYear, d.curMonth)}
     ${renderAccountsOverviewCard(d.accounts, d.curExpenses, d.curIncomes)}
 
     <div class="chart-title" style="margin-bottom:10px">Avisos</div>
@@ -1268,17 +1275,16 @@ function renderSavingsGoalCard(curSaving) {
     </div>`;
 }
 
-/** Tarjeta de ahorro acumulado del año, con gráfico de evolución mes a mes. */
-function renderAccumulatedCard(yearData, year) {
+/** Tarjeta de ahorro acumulado hasta el mes que se esté viendo en el Dashboard, con gráfico mes a mes. */
+function renderAccumulatedCard(yearData, year, month) {
   if (!yearData || !yearData.months) return '';
   const priorSavings = yearData.priorYearsSavings ?? 0;
-  const ytd = accumulatedSavingsToDate(yearData.months, year);
+  const curMonth = month;
+  const ytd = accumulatedSavingsToDate(yearData.months, year, curMonth);
   const total = priorSavings + ytd;
   const pos = total >= 0;
   const ytdPos = ytd >= 0;
 
-  const now = new Date();
-  const curMonth = year === now.getFullYear() ? now.getMonth() + 1 : 12;
   let running = priorSavings;
   const points = [running];
   for (let m = 1; m <= curMonth; m++) {
