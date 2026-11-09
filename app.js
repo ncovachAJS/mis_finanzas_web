@@ -115,6 +115,8 @@ const state = {
   sharedMonthlyCollapsedYears: new Set(),
   insightsAccountsOpen: new Set(),
   lastInsightsData: null,
+  insightsMonth: new Date().getMonth() + 1,
+  insightsYear: new Date().getFullYear(),
   month: new Date().getMonth() + 1,
   year:  new Date().getFullYear(),
   dashYear: new Date().getFullYear(),
@@ -1039,12 +1041,26 @@ function renderMonthlySavings(months, year, priorSavings = 0) {
 /* ═══════════════════════════════════════════════════════════
    DASHBOARD DE AVISOS (insights)
 ════════════════════════════════════════════════════════════════ */
+function updateInsightsMonthLabel() {
+  const el = document.getElementById('insights-month-label');
+  if (el) el.textContent = `${MONTHS[state.insightsMonth - 1]} ${state.insightsYear}`;
+}
+
+function changeInsightsMonth(delta) {
+  let m = state.insightsMonth + delta, y = state.insightsYear;
+  if (m > 12) { m = 1; y++; }
+  if (m < 1)  { m = 12; y--; }
+  state.insightsMonth = m; state.insightsYear = y;
+  updateInsightsMonthLabel();
+  loadInsights();
+}
+
 async function loadInsights() {
   const el = document.getElementById('insights-content');
   el.innerHTML = ldg();
+  updateInsightsMonthLabel();
   try {
-    const now = new Date();
-    const curMonth = now.getMonth() + 1, curYear = now.getFullYear();
+    const curMonth = state.insightsMonth, curYear = state.insightsYear;
     let prevMonth = curMonth - 1, prevYear = curYear;
     if (prevMonth < 1) { prevMonth = 12; prevYear--; }
 
@@ -1145,8 +1161,7 @@ function renderInsights(d) {
     : `<div class="empty" style="padding:28px 16px"><div class="empty-ico">🔎</div><h3>Sin avisos todavía</h3><p>${prevHasData ? 'Todo sigue muy parecido al mes pasado.' : 'Añade datos del mes pasado para ver comparativas.'}</p></div>`;
 
   el.innerHTML = `
-    <div class="section-hdr" style="margin-bottom:2px"><h2>Dashboard</h2></div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">${MONTHS[d.curMonth - 1]} ${d.curYear}</p>
+    <div class="section-hdr" style="margin-bottom:16px"><h2>Dashboard</h2></div>
 
     <div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:22px">
       <div class="scard"><div class="snum c-income" style="font-size:18px">${fmtEur(d.curStats.totalIncomes)}</div><div class="slbls">Ingresos</div></div>
