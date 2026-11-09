@@ -3828,13 +3828,15 @@ function renderSharedMonthlyTotals() {
       ${multiGroup ? groupLines : ''}`;
     }).join('');
     return `
-      <div class="group-hdr" onclick="toggleSharedMonthlyYear(${yb.year})" style="cursor:pointer">
-        <span class="group-hdr-chevron ${collapsed ? '' : 'open'}">▸</span>
-        <span class="group-hdr-ico">${calendarIco}</span>
-        <span class="group-hdr-label">Gasto ${yb.year}</span>
-        <span class="group-hdr-total">${fmtEur(yb.total)}</span>
-      </div>
-      <div class="group-body" style="${collapsed ? 'display:none' : ''}">${rowsHtml}</div>`;
+      <div class="year-total-card">
+        <div class="year-total-hdr" onclick="toggleSharedMonthlyYear(${yb.year})">
+          <span class="group-hdr-chevron ${collapsed ? '' : 'open'}">▸</span>
+          <span class="group-hdr-ico">${calendarIco}</span>
+          <span class="group-hdr-label">Gasto ${yb.year}</span>
+          <span class="group-hdr-total">${fmtEur(yb.total)}</span>
+        </div>
+        <div class="group-body" style="${collapsed ? 'display:none' : ''}">${rowsHtml}</div>
+      </div>`;
   }).join('');
 }
 

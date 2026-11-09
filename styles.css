@@ -290,6 +290,15 @@ input[type=date]{color-scheme:light}
 .month-total-sublabel{font-size:12px;color:var(--muted);flex:1}
 .month-total-subamount{font-size:12px;color:var(--muted);font-family:'DM Sans',sans-serif;min-width:70px;text-align:right}
 
+.year-total-card{background:linear-gradient(135deg,rgba(99,102,241,.14),rgba(99,102,241,.04));border:1px solid rgba(99,102,241,.3);border-radius:14px;padding:4px 14px;margin-bottom:16px}
+.year-total-hdr{display:flex;align-items:center;gap:8px;padding:10px 0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.year-total-hdr .group-hdr-chevron{color:#9d99f7}
+.year-total-hdr .group-hdr-ico{color:#9d99f7}
+.year-total-hdr .group-hdr-label{color:#c7c4fb;font-weight:700}
+.year-total-hdr .group-hdr-total{color:#fff;font-size:16px}
+.year-total-card .group-body{border-top:1px solid rgba(99,102,241,.22)}
+.year-total-card .month-total-row:last-child{border-bottom:none}
+
 /* ACCOUNT CARD */
 .account-card{background:var(--surface);border:none;border-radius:14px;padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 6px rgba(0,0,0,.06),0 4px 20px rgba(0,0,0,.05);transition:box-shadow .2s}
 .account-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.1)}
