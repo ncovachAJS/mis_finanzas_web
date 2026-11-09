@@ -111,7 +111,7 @@ const state = {
   editingSharedExpenseId: null,
   gastosCollapsedGroups: new Set(),
   sharedCollapsedGroups: new Set(),
-  sharedMonthlyOpen: true,
+  sharedMonthlyCollapsedYears: new Set(),
   month: new Date().getMonth() + 1,
   year:  new Date().getFullYear(),
   dashYear: new Date().getFullYear(),
@@ -3780,53 +3780,67 @@ function toggleSharedGroupSection(key) {
   renderSharedOverview();
 }
 
-/** Recuento de lo gastado (importe total de los gastos, sin contar pagos/liquidaciones) cada mes, desglosado por grupo. */
+/** Recuento de lo gastado (importe total de los gastos, sin contar pagos/liquidaciones), por año y mes, desglosado por grupo. */
 function renderSharedMonthlyTotals() {
-  const buckets = new Map();
+  const monthBuckets = new Map();
   state.sharedItems.forEach(it => {
     if (it.type === 'settlement') return;
     const d = new Date(it.date);
     const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
-    if (!buckets.has(key)) buckets.set(key, { year: d.getFullYear(), month: d.getMonth() + 1, total: 0, count: 0, groups: new Map() });
-    const b = buckets.get(key);
+    if (!monthBuckets.has(key)) monthBuckets.set(key, { year: d.getFullYear(), month: d.getMonth() + 1, total: 0, count: 0, groups: new Map() });
+    const b = monthBuckets.get(key);
     b.total += it.amount;
     b.count += 1;
     const gKey = it.groupId || '__sin_grupo__';
     if (!b.groups.has(gKey)) b.groups.set(gKey, { name: it.groupName || 'Sin grupo', total: 0 });
     b.groups.get(gKey).total += it.amount;
   });
-  if (!buckets.size) return '';
-  const rows = [...buckets.values()].sort((a, b) => (b.year * 12 + b.month) - (a.year * 12 + a.month));
-  const collapsed = !state.sharedMonthlyOpen;
+  if (!monthBuckets.size) return '';
+
+  const yearBuckets = new Map();
+  monthBuckets.forEach(mb => {
+    if (!yearBuckets.has(mb.year)) yearBuckets.set(mb.year, { year: mb.year, total: 0, months: [] });
+    const yb = yearBuckets.get(mb.year);
+    yb.total += mb.total;
+    yb.months.push(mb);
+  });
+  const years = [...yearBuckets.values()].sort((a, b) => b.year - a.year);
   const multiGroup = state.sharedGroups.filter(g => g.id).length > 1;
-  const rowsHtml = rows.map(r => {
-    const groupLines = [...r.groups.values()]
-      .sort((a, b) => b.total - a.total)
-      .map(g => `
-        <div class="month-total-subrow">
-          <span class="month-total-sublabel">${esc(g.name)}</span>
-          <span class="month-total-subamount">${fmtEur(g.total)}</span>
-        </div>`).join('');
+  const calendarIco = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+
+  return years.map(yb => {
+    const months = yb.months.sort((a, b) => b.month - a.month);
+    const collapsed = state.sharedMonthlyCollapsedYears.has(yb.year);
+    const rowsHtml = months.map(r => {
+      const groupLines = [...r.groups.values()]
+        .sort((a, b) => b.total - a.total)
+        .map(g => `
+          <div class="month-total-subrow">
+            <span class="month-total-sublabel">${esc(g.name)}</span>
+            <span class="month-total-subamount">${fmtEur(g.total)}</span>
+          </div>`).join('');
+      return `
+      <div class="month-total-row">
+        <span class="month-total-label">${MONTHS[r.month - 1]}</span>
+        <span class="month-total-count">${r.count} gasto${r.count === 1 ? '' : 's'}</span>
+        <span class="month-total-amount">${fmtEur(r.total)}</span>
+      </div>
+      ${multiGroup ? groupLines : ''}`;
+    }).join('');
     return `
-    <div class="month-total-row">
-      <span class="month-total-label">${MONTHS[r.month - 1]} ${r.year}</span>
-      <span class="month-total-count">${r.count} gasto${r.count === 1 ? '' : 's'}</span>
-      <span class="month-total-amount">${fmtEur(r.total)}</span>
-    </div>
-    ${multiGroup ? groupLines : ''}`;
+      <div class="group-hdr" onclick="toggleSharedMonthlyYear(${yb.year})" style="cursor:pointer">
+        <span class="group-hdr-chevron ${collapsed ? '' : 'open'}">▸</span>
+        <span class="group-hdr-ico">${calendarIco}</span>
+        <span class="group-hdr-label">Gasto ${yb.year}</span>
+        <span class="group-hdr-total">${fmtEur(yb.total)}</span>
+      </div>
+      <div class="group-body" style="${collapsed ? 'display:none' : ''}">${rowsHtml}</div>`;
   }).join('');
-  return `
-    <div class="group-hdr" onclick="toggleSharedMonthlyTotals()" style="cursor:pointer">
-      <span class="group-hdr-chevron ${collapsed ? '' : 'open'}">▸</span>
-      <span class="group-hdr-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-      <span class="group-hdr-label">Gastado por mes</span>
-      <span class="group-hdr-total">${fmtEur(rows.reduce((s, r) => s + r.total, 0))}</span>
-    </div>
-    <div class="group-body" style="${collapsed ? 'display:none' : ''}">${rowsHtml}</div>`;
 }
 
-function toggleSharedMonthlyTotals() {
-  state.sharedMonthlyOpen = !state.sharedMonthlyOpen;
+function toggleSharedMonthlyYear(year) {
+  if (state.sharedMonthlyCollapsedYears.has(year)) state.sharedMonthlyCollapsedYears.delete(year);
+  else state.sharedMonthlyCollapsedYears.add(year);
   renderSharedOverview();
 }
 
