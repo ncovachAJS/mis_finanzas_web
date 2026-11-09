@@ -113,6 +113,8 @@ const state = {
   gastosCollapsedGroups: new Set(),
   sharedCollapsedGroups: new Set(),
   sharedMonthlyCollapsedYears: new Set(),
+  insightsAccountsOpen: new Set(),
+  lastInsightsData: null,
   month: new Date().getMonth() + 1,
   year:  new Date().getFullYear(),
   dashYear: new Date().getFullYear(),
@@ -1033,15 +1035,22 @@ async function loadInsights() {
     let prevMonth = curMonth - 1, prevYear = curYear;
     if (prevMonth < 1) { prevMonth = 12; prevYear--; }
 
-    const [curStats, prevStats, curExpenses, prevExpenses, yearData] = await Promise.all([
+    const [curStats, prevStats, curExpenses, prevExpenses, yearData, accounts, curIncomes] = await Promise.all([
       api('GET', `/dashboard/month?month=${curMonth}&year=${curYear}`),
       api('GET', `/dashboard/month?month=${prevMonth}&year=${prevYear}`),
       api('GET', `/expenses?month=${curMonth}&year=${curYear}`),
       api('GET', `/expenses?month=${prevMonth}&year=${prevYear}`),
       api('GET', `/dashboard/year/${curYear}`),
+      api('GET', '/accounts'),
+      api('GET', `/incomes?month=${curMonth}&year=${curYear}`),
     ]);
     if (!curStats) return;
-    renderInsights({ curMonth, curYear, prevMonth, prevYear, curStats, prevStats, curExpenses: curExpenses || [], prevExpenses: prevExpenses || [], yearData });
+    state.lastInsightsData = {
+      curMonth, curYear, prevMonth, prevYear, curStats, prevStats, yearData,
+      curExpenses: curExpenses || [], prevExpenses: prevExpenses || [],
+      accounts: accounts || [], curIncomes: curIncomes || [],
+    };
+    renderInsights(state.lastInsightsData);
   } catch(e) {
     el.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><h3>Error</h3><p>${e.message}</p></div>`;
   }
@@ -1134,10 +1143,67 @@ function renderInsights(d) {
 
     ${renderSavingsGoalCard(curSaving)}
     ${renderAccumulatedCard(d.yearData, d.curYear)}
+    ${renderAccountsOverviewCard(d.accounts, d.curExpenses, d.curIncomes)}
 
     <div class="chart-title" style="margin-bottom:10px">Avisos</div>
     ${avisosHtml}
   `;
+}
+
+/** Tarjeta "Tus cuentas": una fila desplegable por cuenta, con saldo del mes y sus últimos movimientos. */
+function renderAccountsOverviewCard(accounts, curExpenses, curIncomes) {
+  if (!accounts || !accounts.length) return '';
+  const rows = accounts.map(acc => {
+    const exps = curExpenses.filter(e => e.accountId === acc.id);
+    const incs = curIncomes.filter(i => i.accountId === acc.id);
+    const paidIncomes  = incs.filter(i => i.isPaid).reduce((s, i) => s + i.amount, 0);
+    const paidExpenses = exps.filter(e => e.isPaid).reduce((s, e) => s + e.amount, 0);
+    const saldo = paidIncomes - paidExpenses;
+
+    const movements = [
+      ...exps.map(e => ({ name: e.name, amount: e.amount, isIncome: false, isPaid: e.isPaid, createdAt: e.createdAt })),
+      ...incs.map(i => ({ name: i.name, amount: i.amount, isIncome: true, isPaid: i.isPaid, createdAt: i.createdAt })),
+    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 4);
+
+    const open = state.insightsAccountsOpen.has(acc.id);
+    const movementsHtml = movements.length
+      ? movements.map(m => `
+        <div class="acc-mov-row">
+          <span class="acc-mov-ico ${m.isIncome ? 'inc' : 'exp'}">${catIconSvg(m.isIncome ? 'wallet' : 'cart', 15)}</span>
+          <span class="acc-mov-name">${esc(m.name)}${m.isPaid ? '' : ' <span class="acc-mov-pending">· pendiente</span>'}</span>
+          <span class="acc-mov-amount ${m.isIncome ? 'c-income' : ''}">${m.isIncome ? '+' : '−'} ${fmtEur(m.amount)}</span>
+        </div>`).join('')
+      : `<div style="font-size:12px;color:var(--faint);padding:8px 0">Sin movimientos este mes</div>`;
+
+    return `
+      <div class="acc-card">
+        <div class="acc-card-hdr" onclick="toggleInsightsAccount('${acc.id}')">
+          <div>
+            <div class="acc-card-name">${esc(acc.name)}</div>
+            <div class="acc-card-sublbl">Saldo del mes</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="acc-card-amount ${saldo >= 0 ? 'c-income' : 'c-expense'}">${saldo >= 0 ? '+' : ''}${fmtEur(saldo)}</span>
+            <span class="group-hdr-chevron ${open ? 'open' : ''}" style="font-size:14px">▸</span>
+          </div>
+        </div>
+        <div class="acc-card-body" style="${open ? '' : 'display:none'}">
+          <div class="acc-mov-lbl">Últimos movimientos</div>
+          ${movementsHtml}
+        </div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="chart-title" style="margin-bottom:10px">Tus cuentas</div>
+    ${rows}
+  `;
+}
+
+function toggleInsightsAccount(id) {
+  if (state.insightsAccountsOpen.has(id)) state.insightsAccountsOpen.delete(id);
+  else state.insightsAccountsOpen.add(id);
+  if (state.lastInsightsData) renderInsights(state.lastInsightsData);
 }
 
 /** Tarjeta "Objetivo": compara lo ahorrado este mes con el objetivo de ahorro mensual del perfil. */
