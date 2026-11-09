@@ -64,6 +64,8 @@ body{font-family:'DM Sans',system-ui,sans-serif;font-size:16px;line-height:1.6;b
 .hdr-icon{width:42px;height:42px;border-radius:13px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff}
 .eyebrow{font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:.45;font-weight:600;margin-bottom:1px}
 h1{font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;line-height:1.15;color:#fff;letter-spacing:.01em}
+.btn-insights{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;flex-shrink:0;-webkit-tap-highlight-color:transparent}
+.btn-insights:hover{background:rgba(255,255,255,.18)}
 .btn-profile{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:22px;padding:6px 10px 6px 14px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .15s;flex-shrink:0}
 .btn-profile:hover{background:rgba(255,255,255,.18)}
 .btn-profile-name{font-size:13px;font-weight:600;color:rgba(255,255,255,.9);letter-spacing:.01em;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -185,6 +187,12 @@ input[type=date]{color-scheme:light}
 /* CHART */
 .chart-wrap{background:var(--surface);border:none;border-radius:14px;padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 6px rgba(0,0,0,.06),0 4px 20px rgba(0,0,0,.04)}
 .chart-title{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px}
+
+.insight-card{display:flex;align-items:center;gap:12px;background:var(--surface);border:1.5px solid var(--border-l);border-left:4px solid var(--border-l);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.insight-card.good{border-left-color:var(--income)}
+.insight-card.bad{border-left-color:var(--expense)}
+.insight-ico{font-size:20px;flex-shrink:0}
+.insight-text{font-size:13.5px;font-weight:500;color:var(--text);line-height:1.4}
 .chart-legend{display:flex;gap:14px;margin-top:8px;flex-wrap:wrap}
 .chart-legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);width:100%}
 .chart-legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}

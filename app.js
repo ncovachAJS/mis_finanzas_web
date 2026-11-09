@@ -656,7 +656,7 @@ let activeTab = 'dashboard';
 function showTab(tab) {
   document.querySelectorAll('.bnav-item').forEach(t => t.classList.remove('on'));
   document.querySelectorAll('.view').forEach(v => v.classList.remove('on'));
-  document.getElementById('tab-' + tab).classList.add('on');
+  document.getElementById('tab-' + tab)?.classList.add('on'); // 'insights' no tiene botón en el nav inferior
   document.getElementById('view-' + tab).classList.add('on');
   activeTab = tab;
   if ((tab === 'gastos' || tab === 'ingresos') && state.pendingYearJump) {
@@ -669,6 +669,7 @@ function showTab(tab) {
   }
   if (tab === 'dashboard') loadDashboard();
   if (tab === 'shared') loadSharedExpenses();
+  if (tab === 'insights') loadInsights();
 }
 
 function showDashTab(which) {
@@ -1017,6 +1018,121 @@ function renderMonthlySavings(months, year, priorSavings = 0) {
       </div>
       ${rows}
     </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DASHBOARD DE AVISOS (insights)
+════════════════════════════════════════════════════════════════ */
+async function loadInsights() {
+  const el = document.getElementById('insights-content');
+  el.innerHTML = ldg();
+  try {
+    const now = new Date();
+    const curMonth = now.getMonth() + 1, curYear = now.getFullYear();
+    let prevMonth = curMonth - 1, prevYear = curYear;
+    if (prevMonth < 1) { prevMonth = 12; prevYear--; }
+
+    const [curStats, prevStats, curExpenses, prevExpenses] = await Promise.all([
+      api('GET', `/dashboard/month?month=${curMonth}&year=${curYear}`),
+      api('GET', `/dashboard/month?month=${prevMonth}&year=${prevYear}`),
+      api('GET', `/expenses?month=${curMonth}&year=${curYear}`),
+      api('GET', `/expenses?month=${prevMonth}&year=${prevYear}`),
+    ]);
+    if (!curStats) return;
+    renderInsights({ curMonth, curYear, prevMonth, prevYear, curStats, prevStats, curExpenses: curExpenses || [], prevExpenses: prevExpenses || [] });
+  } catch(e) {
+    el.innerHTML = `<div class="empty"><div class="empty-ico">⚠️</div><h3>Error</h3><p>${e.message}</p></div>`;
+  }
+}
+
+/** Agrupa gastos por categoría (clave categoryId o '__none__') y suma importes. */
+function sumByCategory(expenses) {
+  const map = new Map();
+  expenses.forEach(e => {
+    const key = e.categoryId || '__none__';
+    const cur = map.get(key) || { name: e.category?.name || 'Sin categoría', total: 0 };
+    cur.total += e.amount;
+    map.set(key, cur);
+  });
+  return map;
+}
+
+function renderInsights(d) {
+  const el = document.getElementById('insights-content');
+  const curSaving  = d.curStats.totalIncomes - d.curStats.totalExpenses;
+  const prevSaving = d.prevStats.totalIncomes - d.prevStats.totalExpenses;
+  const prevHasData = d.prevStats.totalIncomes > 0 || d.prevStats.totalExpenses > 0;
+
+  const avisos = [];
+  if (prevHasData) {
+    const prevLabel = `${MONTHS[d.prevMonth - 1]}`;
+
+    const diffSaving = curSaving - prevSaving;
+    if (Math.abs(diffSaving) >= 1) {
+      avisos.push({
+        icon: diffSaving > 0 ? '📈' : '📉',
+        tone: diffSaving > 0 ? 'good' : 'bad',
+        text: diffSaving > 0
+          ? `Este mes llevas ahorrado ${fmtEur(diffSaving)} más que en ${prevLabel}`
+          : `Este mes llevas ahorrado ${fmtEur(Math.abs(diffSaving))} menos que en ${prevLabel}`,
+      });
+    }
+
+    const diffExpenses = d.curStats.totalExpenses - d.prevStats.totalExpenses;
+    if (Math.abs(diffExpenses) >= 1) {
+      avisos.push({
+        icon: diffExpenses > 0 ? '💸' : '✅',
+        tone: diffExpenses > 0 ? 'bad' : 'good',
+        text: diffExpenses > 0
+          ? `Llevas gastado ${fmtEur(diffExpenses)} más que en ${prevLabel}`
+          : `Llevas gastado ${fmtEur(Math.abs(diffExpenses))} menos que en ${prevLabel}`,
+      });
+    }
+
+    const curByCat = sumByCategory(d.curExpenses);
+    const prevByCat = sumByCategory(d.prevExpenses);
+    const allKeys = new Set([...curByCat.keys(), ...prevByCat.keys()]);
+    let biggest = null;
+    allKeys.forEach(key => {
+      const curV = curByCat.get(key)?.total || 0;
+      const prevV = prevByCat.get(key)?.total || 0;
+      const diff = curV - prevV;
+      if (!biggest || Math.abs(diff) > Math.abs(biggest.diff)) {
+        biggest = { name: (curByCat.get(key) || prevByCat.get(key)).name, diff };
+      }
+    });
+    if (biggest && Math.abs(biggest.diff) >= 5) {
+      avisos.push({
+        icon: biggest.diff > 0 ? '⬆️' : '⬇️',
+        tone: biggest.diff > 0 ? 'bad' : 'good',
+        text: biggest.diff > 0
+          ? `Lo que más ha subido es "${biggest.name}": +${fmtEur(biggest.diff)}`
+          : `Lo que más ha bajado es "${biggest.name}": ${fmtEur(biggest.diff)}`,
+      });
+    }
+  }
+
+  const avisosHtml = avisos.length
+    ? avisos.map(a => `
+      <div class="insight-card ${a.tone}">
+        <span class="insight-ico">${a.icon}</span>
+        <span class="insight-text">${esc(a.text)}</span>
+      </div>`).join('')
+    : `<div class="empty" style="padding:28px 16px"><div class="empty-ico">🔎</div><h3>Sin avisos todavía</h3><p>${prevHasData ? 'Todo sigue muy parecido al mes pasado.' : 'Añade datos del mes pasado para ver comparativas.'}</p></div>`;
+
+  el.innerHTML = `
+    <div class="section-hdr" style="margin-bottom:2px"><h2>Dashboard</h2></div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">${MONTHS[d.curMonth - 1]} ${d.curYear}</p>
+
+    <div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:22px">
+      <div class="scard"><div class="snum c-income" style="font-size:18px">${fmtEur(d.curStats.totalIncomes)}</div><div class="slbls">Ingresos</div></div>
+      <div class="scard"><div class="snum c-expense" style="font-size:18px">${fmtEur(d.curStats.totalExpenses)}</div><div class="slbls">Gastos</div></div>
+      <div class="scard"><div class="snum ${curSaving >= 0 ? 'c-income' : 'c-expense'}" style="font-size:18px">${curSaving >= 0 ? '+' : ''}${fmtEur(curSaving)}</div><div class="slbls">Ahorro</div></div>
+    </div>
+
+    <div class="chart-title" style="margin-bottom:10px">Avisos</div>
+    ${avisosHtml}
+  `;
 }
 
 function renderBarChart(months) {
