@@ -18,7 +18,7 @@ const BASE = (window.API_URL || 'http://localhost:3000').replace(/\/$/, '');
 
 // Debe coincidir con el ?v= de app.js en index.html. Al tocar app.js/styles.css,
 // súbelos juntos (ver initVersionCheck más abajo).
-const APP_VERSION = '20261113a';
+const APP_VERSION = '20261113b';
 
 /* ═══════════════════════════════════════════════════════════
    COMPROBACIÓN DE VERSIÓN (auto-recarga si hay un deploy nuevo)
@@ -1321,10 +1321,12 @@ function renderAccumulatedCard(yearData, year, month) {
 
   let running = priorSavings;
   const points = [running];
+  const monthLabels = [null]; // el punto 0 es el arrastre de antes de enero, sin mes propio
   for (let m = 1; m <= curMonth; m++) {
     const mData = yearData.months.find(x => x.month === m);
     running += mData ? (mData.totalIncomes - mData.totalExpenses) : 0;
     points.push(running);
+    monthLabels.push(MONTHS_SHORT[m - 1]);
   }
 
   return `
@@ -1335,29 +1337,46 @@ function renderAccumulatedCard(yearData, year, month) {
         <span>Desde enero</span>
         <span class="${ytdPos ? 'c-income' : 'c-expense'}">${ytdPos ? '+' : ''}${fmtEur(ytd)} ${ytdPos ? '▲' : '▼'}</span>
       </div>
-      ${renderAreaChart(points)}
-      <div class="insight-goal-row" style="margin-top:2px">
-        <span>Ene ${year}: ${fmtEur(priorSavings)}</span>
-        <span>${MONTHS_SHORT[curMonth - 1]} ${year}</span>
-      </div>
+      ${renderAreaChart(points, monthLabels)}
     </div>`;
 }
 
-/** Gráfico de área simple a partir de una serie de valores acumulados. */
-function renderAreaChart(points) {
+/** Gráfico de área con un hito (punto + importe) por cada mes. */
+function renderAreaChart(points, labels) {
   if (!points || points.length < 2) return '';
-  const W = 600, H = 110;
+  const W = 600, H = 110, TOP_PAD = 26, BOTTOM_PAD = 18;
+  const chartH = H - TOP_PAD - BOTTOM_PAD;
   const minV = Math.min(...points, 0);
   const maxV = Math.max(...points, 0);
   const range = (maxV - minV) || 1;
   const stepX = W / (points.length - 1);
-  const toY = v => H - ((v - minV) / range) * H;
+  const toY = v => TOP_PAD + chartH - ((v - minV) / range) * chartH;
   const coords = points.map((v, i) => [i * stepX, toY(v)]);
   const linePath = 'M' + coords.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' L');
-  const areaPath = `${linePath} L${W},${H} L0,${H} Z`;
-  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;margin-top:10px;display:block">
+  const areaPath = `${linePath} L${W},${TOP_PAD + chartH} L0,${TOP_PAD + chartH} Z`;
+
+  // Con muchos meses, etiqueta uno de cada dos para que no se amontonen
+  const skipLabels = points.length > 8;
+  const lastIdx = points.length - 1;
+
+  const dots = coords.map(([x, y], i) => {
+    if (i === 0) return ''; // el punto de arranque no es un mes, sin hito
+    const isLast = i === lastIdx;
+    const r = isLast ? 4.5 : 3;
+    const showLabel = labels[i] && (!skipLabels || i % 2 === 0 || isLast);
+    const valueTag = isLast
+      ? `<text x="${x}" y="${Math.max(y - 10, 10)}" font-size="11" font-weight="700" fill="#e8c545" text-anchor="middle">${fmtEur(points[i])}</text>`
+      : '';
+    return `
+      <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${isLast ? '#e8c545' : 'var(--surface)'}" stroke="#e8c545" stroke-width="2"/>
+      ${showLabel ? `<text x="${x.toFixed(1)}" y="${H - 2}" font-size="9" fill="var(--faint)" text-anchor="middle">${labels[i]}</text>` : ''}
+      ${valueTag}`;
+  }).join('');
+
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;margin-top:10px;display:block;overflow:visible">
     <path d="${areaPath}" fill="#e8c54530" stroke="none"/>
     <path d="${linePath}" fill="none" stroke="#e8c545" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    ${dots}
   </svg>`;
 }
 
