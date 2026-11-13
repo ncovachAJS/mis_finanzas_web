@@ -16,6 +16,40 @@
 ════════════════════════════════════════════════════════════════ */
 const BASE = (window.API_URL || 'http://localhost:3000').replace(/\/$/, '');
 
+// Debe coincidir con el ?v= de app.js en index.html. Al tocar app.js/styles.css,
+// súbelos juntos (ver initVersionCheck más abajo).
+const APP_VERSION = '20261113a';
+
+/* ═══════════════════════════════════════════════════════════
+   COMPROBACIÓN DE VERSIÓN (auto-recarga si hay un deploy nuevo)
+   Los PWA "añadidos a inicio" en iOS a veces se quedan con una copia
+   vieja de app.js aunque el index.html que cargan sea el actual, y no
+   se arregla ni cerrando la app. Comprobamos el index.html real del
+   servidor (sin caché) cada vez que la app vuelve a primer plano; si
+   su app.js?v= no coincide con el que tenemos cargado, recargamos solo.
+════════════════════════════════════════════════════════════════ */
+(function initVersionCheck() {
+  let checking = false;
+  async function checkForNewVersion() {
+    if (checking) return;
+    checking = true;
+    try {
+      const res = await fetch('/?_v=' + Date.now(), { cache: 'no-store' });
+      const html = await res.text();
+      const match = html.match(/app\.js\?v=([A-Za-z0-9]+)/);
+      if (match && match[1] && match[1] !== APP_VERSION) {
+        location.reload();
+      }
+    } catch(e) { /* sin conexión o fallo puntual: no hacemos nada */ }
+    finally { checking = false; }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkForNewVersion();
+  });
+  window.addEventListener('pageshow', () => checkForNewVersion());
+  checkForNewVersion();
+})();
+
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
