@@ -18,7 +18,7 @@ const BASE = (window.API_URL || 'http://localhost:3000').replace(/\/$/, '');
 
 // Debe coincidir con el ?v= de app.js en index.html. Al tocar app.js/styles.css,
 // súbelos juntos (ver initVersionCheck más abajo).
-const APP_VERSION = '20261113b';
+const APP_VERSION = '20261113c';
 
 /* ═══════════════════════════════════════════════════════════
    COMPROBACIÓN DE VERSIÓN (auto-recarga si hay un deploy nuevo)
@@ -667,17 +667,22 @@ async function startApp() {
   }).catch(() => {});
   updateAvatarUI(state.user?.avatar || null);
 
+  // Mide la cabecera una vez (y en cambios reales de tamaño de ventana), no de
+  // forma continua: un ResizeObserver aquí puede retroalimentarse a sí mismo
+  // por redondeos de subpíxel en iOS y se nota como que "tiembla" la pantalla.
   const hdr = document.getElementById('hdr');
   if (hdr) {
     const setHdrH = () => {
       const h = hdr.offsetHeight;
       if (h > 0) document.documentElement.style.setProperty('--hdr-h', h + 'px');
     };
-    requestAnimationFrame(() => {
-      setHdrH();
-      if (typeof ResizeObserver !== 'undefined') new ResizeObserver(setHdrH).observe(hdr);
-      else setTimeout(setHdrH, 300);
+    requestAnimationFrame(setHdrH);
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(setHdrH, 200);
     });
+    window.addEventListener('orientationchange', () => setTimeout(setHdrH, 300));
   }
 
   updateMonthLabels();
