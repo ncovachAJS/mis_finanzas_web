@@ -64,7 +64,7 @@ body{font-family:'DM Sans',system-ui,sans-serif;font-size:16px;line-height:1.6;c
 .recovery-code{font-family:'DM Sans',sans-serif;font-weight:700;font-size:22px;letter-spacing:.03em;text-align:center;background:var(--surface-2);border-radius:var(--r);padding:18px 12px;margin-bottom:18px;word-break:break-all;user-select:all}
 
 /* HEADER */
-.hdr{background:linear-gradient(135deg,var(--hero-a) 0%,var(--hero-b) 100%);color:#fff;padding:20px 20px 18px;padding-top:calc(28px + env(safe-area-inset-top,0px));position:fixed;top:0;left:0;right:0;z-index:100;border-bottom:1px solid rgba(255,255,255,.07)}
+.hdr{background:linear-gradient(to bottom,#000 0,#000 env(safe-area-inset-top,0px),var(--hero-a) env(safe-area-inset-top,0px),var(--hero-b) 100%);color:#fff;padding:20px 20px 18px;padding-top:calc(28px + env(safe-area-inset-top,0px));position:fixed;top:0;left:0;right:0;z-index:100;border-bottom:1px solid rgba(255,255,255,.07)}
 .hdr-top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px}
 h1{font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;line-height:1.15;color:#fff;letter-spacing:.01em}
 .hdr-title{justify-self:center;margin:0;white-space:nowrap}
