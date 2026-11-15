@@ -103,6 +103,7 @@ const state = {
   sePaidByMe: true,
   settleIPaid: true,
   sharedLinked: false,
+  sharedDataLoaded: false,
   sharedPartner: null,
   sharedBalance: 0,
   sharedItems: [],
@@ -3390,10 +3391,23 @@ function openExpenseModal(id) {
   ['e-name-err','e-amount-err','e-account-err','e-split-group-err'].forEach(e => document.getElementById(e).classList.remove('on'));
 
   // El switch de Split solo tiene sentido al crear un gasto nuevo, y solo si
-  // hay pareja vinculada y al menos un grupo donde meterlo.
+  // hay pareja vinculada y al menos un grupo donde meterlo. state.sharedGroups
+  // normalmente solo se carga al visitar la pestaña Split, así que si todavía
+  // no se cargó en esta sesión, se pide ahora para no ocultar el switch sin motivo.
   document.getElementById('e-split-toggle').classList.remove('on');
   document.getElementById('e-split-group-row').style.display = 'none';
-  document.getElementById('e-split-wrap').style.display = (!isEdit && state.sharedLinked && hasSharedGroups()) ? '' : 'none';
+  const updateSplitWrapVisibility = () => {
+    document.getElementById('e-split-wrap').style.display =
+      (!isEdit && state.sharedLinked && hasSharedGroups()) ? '' : 'none';
+  };
+  updateSplitWrapVisibility();
+  if (!isEdit && !state.sharedDataLoaded) {
+    ensureSharedDataLoaded().then(() => {
+      if (!state.editingExpenseId && document.getElementById('expense-modal').classList.contains('on')) {
+        updateSplitWrapVisibility();
+      }
+    });
+  }
 
   if (isEdit) {
     const exp = state.expenses.find(e => e.id === id);
@@ -4030,6 +4044,7 @@ async function loadSharedExpenses() {
     state.sharedItems = feed.items ?? [];
     state.sharedPartner = feed.partner ?? state.sharedPartner;
     state.sharedGroups = groupsData.groups ?? [];
+    state.sharedDataLoaded = true;
     syncPartnerNavLabel();
     renderSharedView();
   } catch(e) {
@@ -4039,6 +4054,24 @@ async function loadSharedExpenses() {
 
 function syncPartnerNavLabel() {
   // La pestaña siempre dice "Split", vinculada o no.
+}
+
+/** Carga partner + grupos de Split si todavía no se cargaron en esta sesión
+ *  (normalmente solo pasa al visitar la pestaña Split), para que el switch
+ *  de "añadir al Split" del modal de gasto sepa si mostrarse o no. */
+async function ensureSharedDataLoaded() {
+  if (state.sharedDataLoaded) return;
+  try {
+    const p = await api('GET', '/partner');
+    if (p === null) return;
+    state.sharedLinked = !!p.linked;
+    state.sharedPartner = p.partner;
+    if (state.sharedLinked) {
+      const groupsData = await api('GET', '/shared-groups');
+      if (groupsData) state.sharedGroups = groupsData.groups ?? [];
+    }
+    state.sharedDataLoaded = true;
+  } catch(e) { /* se reintentará la próxima vez que haga falta */ }
 }
 
 async function openGroupsManagement() {
