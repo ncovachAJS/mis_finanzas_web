@@ -18,7 +18,7 @@ const BASE = (window.API_URL || 'http://localhost:3000').replace(/\/$/, '');
 
 // Debe coincidir con el ?v= de app.js en index.html. Al tocar app.js/styles.css,
 // súbelos juntos (ver initVersionCheck más abajo).
-const APP_VERSION = '20261113c';
+const APP_VERSION = '20261115a';
 
 /* ═══════════════════════════════════════════════════════════
    COMPROBACIÓN DE VERSIÓN (auto-recarga si hay un deploy nuevo)
@@ -148,6 +148,7 @@ const state = {
   sharedCollapsedGroups: new Set(),
   sharedMonthlyCollapsedYears: new Set(),
   insightsAccountsOpen: new Set(),
+  insightsSelectedDay: null,
   lastInsightsData: null,
   insightsMonth: new Date().getMonth() + 1,
   insightsYear: new Date().getFullYear(),
@@ -1097,6 +1098,7 @@ function changeInsightsMonth(delta) {
   if (m > 12) { m = 1; y++; }
   if (m < 1)  { m = 12; y--; }
   state.insightsMonth = m; state.insightsYear = y;
+  state.insightsSelectedDay = null;
   updateInsightsMonthLabel();
   loadInsights();
 }
@@ -1218,6 +1220,7 @@ function renderInsights(d) {
     ${renderSavingsGoalCard(curSaving)}
     ${renderAccumulatedCard(d.yearData, d.curYear, d.curMonth)}
     ${renderAccountsOverviewCard(d.accounts, d.curExpenses, d.curIncomes)}
+    ${renderCalendarCard(d.curExpenses, d.curIncomes, d.curMonth, d.curYear)}
 
     <div class="chart-title" style="margin-bottom:10px">Avisos</div>
     ${avisosHtml}
@@ -1277,6 +1280,78 @@ function renderAccountsOverviewCard(accounts, curExpenses, curIncomes) {
 function toggleInsightsAccount(id) {
   if (state.insightsAccountsOpen.has(id)) state.insightsAccountsOpen.delete(id);
   else state.insightsAccountsOpen.add(id);
+  if (state.lastInsightsData) renderInsights(state.lastInsightsData);
+}
+
+const WEEKDAYS_SHORT = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+
+/** Calendario del mes: qué días se pagó algo (rojo) o se cobró algo (verde). */
+function renderCalendarCard(curExpenses, curIncomes, month, year) {
+  const byDay = new Map(); // día del mes -> { expenses: [], incomes: [] }
+  const addTo = (list, kind) => {
+    list.forEach(item => {
+      if (!item.isPaid || !item.paidDate) return;
+      const d = new Date(item.paidDate);
+      if (d.getUTCFullYear() !== year || d.getUTCMonth() + 1 !== month) return;
+      const day = d.getUTCDate();
+      if (!byDay.has(day)) byDay.set(day, { expenses: [], incomes: [] });
+      byDay.get(day)[kind].push(item);
+    });
+  };
+  addTo(curExpenses, 'expenses');
+  addTo(curIncomes, 'incomes');
+
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const firstWeekday = (new Date(year, month - 1, 1).getDay() + 6) % 7; // 0 = lunes
+  const now = new Date();
+  const isCurMonthReal = now.getFullYear() === year && now.getMonth() + 1 === month;
+  const todayNum = isCurMonthReal ? now.getDate() : -1;
+
+  const headerCells = WEEKDAYS_SHORT.map(w => `<div class="cal-wd">${w}</div>`).join('');
+  const blanks = Array.from({ length: firstWeekday }, () => '<div class="cal-cell cal-empty"></div>').join('');
+  const dayCells = Array.from({ length: daysInMonth }, (_, i) => {
+    const day = i + 1;
+    const info = byDay.get(day);
+    const hasExp = info && info.expenses.length > 0;
+    const hasInc = info && info.incomes.length > 0;
+    const isToday = day === todayNum;
+    const isSelected = state.insightsSelectedDay === day;
+    return `
+      <div class="cal-cell ${isToday ? 'cal-today' : ''} ${isSelected ? 'cal-selected' : ''}" onclick="selectInsightsDay(${day})">
+        <span class="cal-daynum">${day}</span>
+        <span class="cal-dots">${hasInc ? '<span class="cal-dot inc"></span>' : ''}${hasExp ? '<span class="cal-dot exp"></span>' : ''}</span>
+      </div>`;
+  }).join('');
+
+  const selectedInfo = state.insightsSelectedDay ? byDay.get(state.insightsSelectedDay) : null;
+  const selectedItems = selectedInfo ? [
+    ...selectedInfo.incomes.map(i => ({ ...i, _isIncome: true })),
+    ...selectedInfo.expenses.map(e => ({ ...e, _isIncome: false })),
+  ] : [];
+  const selectedHtml = !state.insightsSelectedDay ? '' : selectedItems.length === 0
+    ? `<div style="font-size:12px;color:var(--faint);padding:10px 0">Nada pagado/cobrado el día ${state.insightsSelectedDay}.</div>`
+    : selectedItems.map(it => `
+      <div class="acc-mov-row">
+        <span class="acc-mov-ico ${it._isIncome ? 'inc' : 'exp'}">${catIconSvg(it._isIncome ? 'wallet' : 'cart', 15)}</span>
+        <span class="acc-mov-name">${esc(it.name)}</span>
+        <span class="acc-mov-amount ${it._isIncome ? 'c-income' : ''}">${it._isIncome ? '+' : '−'} ${fmtEur(it.amount)}</span>
+      </div>`).join('');
+
+  return `
+    <div class="insight-goal-card">
+      <div class="insight-goal-hdr"><span>Calendario de pagos</span></div>
+      <div class="cal-grid cal-grid-hdr">${headerCells}</div>
+      <div class="cal-grid">${blanks}${dayCells}</div>
+      <div class="cal-legend">
+        <span><span class="cal-dot inc"></span> Cobrado</span>
+        <span><span class="cal-dot exp"></span> Pagado</span>
+      </div>
+      ${state.insightsSelectedDay ? `<div class="acc-mov-lbl">Día ${state.insightsSelectedDay}</div>${selectedHtml}` : ''}
+    </div>`;
+}
+
+function selectInsightsDay(day) {
+  state.insightsSelectedDay = state.insightsSelectedDay === day ? null : day;
   if (state.lastInsightsData) renderInsights(state.lastInsightsData);
 }
 

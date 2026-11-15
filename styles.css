@@ -204,6 +204,22 @@ input[type=date]{color-scheme:light}
 .insight-goal-note{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-top:10px;line-height:1.4}
 .insight-networth-amount{font-family:'DM Sans',sans-serif;font-weight:700;font-size:28px;letter-spacing:-.02em;margin-bottom:2px}
 
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:6px}
+.cal-grid-hdr{margin-top:10px;margin-bottom:2px}
+.cal-wd{text-align:center;font-size:10px;font-weight:600;color:var(--faint);padding-bottom:4px}
+.cal-cell{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border-radius:9px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.cal-cell.cal-empty{cursor:default}
+.cal-daynum{font-size:12px;color:var(--text)}
+.cal-cell.cal-today .cal-daynum{font-weight:700;color:var(--primary)}
+.cal-cell.cal-today{box-shadow:inset 0 0 0 1.5px var(--primary)}
+.cal-cell.cal-selected{background:var(--border-l)}
+.cal-dots{display:flex;gap:2px;height:5px}
+.cal-dot{width:5px;height:5px;border-radius:50%;display:inline-block}
+.cal-dot.inc{background:var(--income)}
+.cal-dot.exp{background:var(--expense)}
+.cal-legend{display:flex;gap:16px;margin-top:10px;font-size:11px;color:var(--muted)}
+.cal-legend span{display:flex;align-items:center;gap:5px}
+
 .acc-card{background:var(--surface);border:1.5px solid var(--border-l);border-radius:14px;margin-bottom:10px;overflow:hidden}
 .acc-card-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .acc-card-name{font-size:14px;font-weight:700;color:var(--text)}
