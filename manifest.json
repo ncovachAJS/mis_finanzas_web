@@ -1,0 +1,11 @@
+{
+  "name": "Cuentas Claras",
+  "short_name": "Cuentas Claras",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#5c0f1c",
+  "theme_color": "#5c0f1c",
+  "icons": [
+    { "src": "icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
