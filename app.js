@@ -4218,7 +4218,7 @@ function renderSharedOverview() {
     </div>
     <div class="ractions" style="margin-bottom:10px">
       <button class="btn-p" style="flex:1;margin-top:0" onclick="openSharedExpenseModal()">＋ Gasto compartido</button>
-      <button class="btn-s" onclick="openSettleModal()">Registrar pago</button>
+      <button class="btn-s" onclick="openSettleModal()">Liquidar deudas</button>
     </div>
     <button class="btn-s" style="width:100%;margin-bottom:18px;justify-content:center" onclick="openGroupsManagement()">${catIconSvg('plane', 15)} Grupos (${state.sharedGroups.filter(g => g.id).length})</button>
     ${renderSharedMonthlyTotals()}
@@ -4374,7 +4374,7 @@ function renderSharedFeed() {
     </div>
     <div class="ractions" style="margin-bottom:18px">
       <button class="btn-p" style="flex:1;margin-top:0" onclick="openSharedExpenseModal()">＋ Gasto compartido</button>
-      <button class="btn-s" onclick="openSettleModal()">Registrar pago</button>
+      <button class="btn-s" onclick="openSettleModal()">Liquidar deudas</button>
     </div>
     ${itemsHtml}
   `;
