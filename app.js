@@ -2670,6 +2670,17 @@ function applyUserTheme() {
   if (saved && saved !== 'system') document.documentElement.setAttribute('data-theme', saved);
   else document.documentElement.removeAttribute('data-theme');
   updateThemeSelector();
+  updateThemeColorMeta();
+}
+
+// Mantiene el color de la barra de estado de iOS (meta theme-color) sincronizado
+// con el tema activo (manual o del sistema), para que no se quede blanca.
+function updateThemeColorMeta() {
+  const meta = document.getElementById('meta-theme-color');
+  if (!meta) return;
+  const attr = document.documentElement.getAttribute('data-theme');
+  const isDark = attr ? attr === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  meta.setAttribute('content', isDark ? '#5c0f1c' : '#d9304a');
 }
 
 function setTheme(value) {
@@ -2681,6 +2692,7 @@ function setTheme(value) {
     localStorage.setItem(_themeKey(), value);
   }
   updateThemeSelector();
+  updateThemeColorMeta();
 }
 
 function updateThemeSelector() {
