@@ -3387,7 +3387,13 @@ function openExpenseModal(id) {
   document.getElementById('e-paid-toggle').classList.remove('on');
   document.getElementById('e-propagate-toggle').classList.remove('on');
   document.getElementById('e-propagate-row').style.display = isEdit ? '' : 'none';
-  ['e-name-err','e-amount-err','e-account-err'].forEach(e => document.getElementById(e).classList.remove('on'));
+  ['e-name-err','e-amount-err','e-account-err','e-split-group-err'].forEach(e => document.getElementById(e).classList.remove('on'));
+
+  // El switch de Split solo tiene sentido al crear un gasto nuevo, y solo si
+  // hay pareja vinculada y al menos un grupo donde meterlo.
+  document.getElementById('e-split-toggle').classList.remove('on');
+  document.getElementById('e-split-group-row').style.display = 'none';
+  document.getElementById('e-split-wrap').style.display = (!isEdit && state.sharedLinked && hasSharedGroups()) ? '' : 'none';
 
   if (isEdit) {
     const exp = state.expenses.find(e => e.id === id);
@@ -3447,6 +3453,10 @@ async function saveExpense() {
   else            document.getElementById('e-amount-err').classList.remove('on');
   if (!accountId) { document.getElementById('e-account-err').classList.add('on'); valid = false; }
   else            document.getElementById('e-account-err').classList.remove('on');
+  const splitOn = document.getElementById('e-split-toggle').classList.contains('on');
+  const splitGroupId = document.getElementById('e-split-group').value;
+  if (splitOn && !splitGroupId) { document.getElementById('e-split-group-err').classList.add('on'); valid = false; }
+  else document.getElementById('e-split-group-err').classList.remove('on');
   if (!valid) return;
 
   if (!state.editingExpenseId
@@ -3483,7 +3493,18 @@ async function saveExpense() {
       showToast(await updateRecurring('expenses', state.editingExpenseId, payload, 'e', until, 'Gasto'), 'success');
     } else {
       const res = await api('POST', '/expenses', { ...payload, ...(until && { repeatUntilMonth: until.untilMonth, repeatUntilYear: until.untilYear }) });
-      showToast(res?.repeated ? `Gasto añadido en este mes y ${res.repeated} más` : 'Gasto añadido', 'success');
+      let msg = res?.repeated ? `Gasto añadido en este mes y ${res.repeated} más` : 'Gasto añadido';
+      let msgType = 'success';
+      if (splitOn) {
+        try {
+          await api('POST', '/shared-expenses', { description: name, amount, paidByMe: true, groupId: splitGroupId });
+          msg += ' y compartido en Split';
+        } catch(se) {
+          msg += ', pero no se pudo compartir en Split (' + (se.message || 'error') + ')';
+          msgType = 'error';
+        }
+      }
+      showToast(msg, msgType);
     }
     closeModal('expense-modal');
     await loadGastos();
@@ -3965,6 +3986,13 @@ function closePrintPreview() {
 ════════════════════════════════════════════════════════════════ */
 function togglePaid(prefix) {
   document.getElementById(prefix + '-paid-toggle').classList.toggle('on');
+}
+
+function toggleExpenseSplit() {
+  const on = document.getElementById('e-split-toggle').classList.toggle('on');
+  document.getElementById('e-split-group-row').style.display = on ? '' : 'none';
+  document.getElementById('e-split-group-err').classList.remove('on');
+  if (on) populateGroupSelect('e-split-group');
 }
 
 /* ═══════════════════════════════════════════════════════════

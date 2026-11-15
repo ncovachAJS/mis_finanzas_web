@@ -13,7 +13,7 @@
   <script src="config.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=20261115t">
+  <link rel="stylesheet" href="styles.css?v=20261115u">
 </head>
 <body>
 
@@ -523,6 +523,20 @@
         <div class="tg-lbl">Aplicar cambios también a los meses siguientes</div>
       </div>
     </div>
+
+    <div id="e-split-wrap" style="display:none">
+      <div class="slbl">Compartido</div>
+      <div class="toggle-row" id="e-split-toggle" onclick="toggleExpenseSplit()">
+        <div class="sw"></div>
+        <div class="tg-lbl">Añadir también como gasto compartido (Split)</div>
+      </div>
+      <div class="fld" id="e-split-group-row" style="display:none">
+        <label>Grupo <span class="req">*</span></label>
+        <select id="e-split-group"></select>
+        <div class="err-msg" id="e-split-group-err">Selecciona un grupo</div>
+      </div>
+    </div>
+
     <div class="modal-btns">
       <button class="btn-s" onclick="closeModal('expense-modal')">Cancelar</button>
       <button class="btn-p" onclick="saveExpense()" id="e-save-btn">Guardar</button>
@@ -1084,6 +1098,6 @@
 
 <div id="print-area"></div>
 
-<script src="app.js?v=20261115t"></script>
+<script src="app.js?v=20261115u"></script>
 </body>
 </html>
