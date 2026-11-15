@@ -627,8 +627,6 @@ async function startApp() {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   applyUserTheme();
-  const nameEl = document.getElementById('hdr-user');
-  if (nameEl) nameEl.textContent = state.user?.name?.split(' ')[0] ?? '';
   api('GET', '/partner').then(p => {
     if (p?.linked) { state.sharedLinked = true; state.sharedPartner = p.partner; syncPartnerNavLabel(); }
   }).catch(() => {});
@@ -3162,7 +3160,6 @@ async function saveProfile() {
     if (data) {
       state.user = { ...state.user, name: data.name ?? state.user.name, monthlyBudget: data.monthlyBudget, monthlySavingsGoal: data.monthlySavingsGoal };
       localStorage.setItem('finanzas_user', JSON.stringify(state.user));
-      document.getElementById('hdr-user').textContent = state.user.name?.split(' ')[0] ?? '';
     }
     showToast('Perfil actualizado', 'success');
   } catch(e) {
