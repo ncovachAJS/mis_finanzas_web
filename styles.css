@@ -43,6 +43,7 @@
   --bg-grad-a:#e14b63;--bg-grad-b:#fff6f6;
 }
 *{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg)}
 body{font-family:'DM Sans',system-ui,sans-serif;font-size:16px;line-height:1.6;color:var(--text);min-height:100vh;
   background:linear-gradient(180deg,var(--bg-grad-a) 0%,var(--bg-grad-b) 45%,var(--bg) 70%);
   background-attachment:fixed}
