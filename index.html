@@ -13,7 +13,7 @@
   <script src="config.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=20261115x">
+  <link rel="stylesheet" href="styles.css?v=20261115y">
 </head>
 <body>
 
@@ -881,7 +881,8 @@
         <div class="sw"></div>
         <div class="tg-lbl">Avisarme de gastos pendientes por vencer</div>
       </div>
-      <p id="p-notif-hint" style="font-size:12px;color:var(--muted);margin:6px 0 20px"></p>
+      <p id="p-notif-hint" style="font-size:12px;color:var(--muted);margin:6px 0 10px"></p>
+      <button class="btn-s" id="p-notif-test-btn" onclick="sendTestNotification()" style="display:none;width:100%;margin-bottom:20px">Enviar notificación de prueba</button>
 
       <div class="slbl">Foto de perfil</div>
       <div class="avatar-upload" onclick="document.getElementById('p-avatar-input').click()">
@@ -1105,6 +1106,6 @@
 
 <div id="print-area"></div>
 
-<script src="app.js?v=20261115x"></script>
+<script src="app.js?v=20261115y"></script>
 </body>
 </html>

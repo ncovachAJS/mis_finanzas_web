@@ -2729,22 +2729,37 @@ async function _getPushSubscription() {
 async function updateNotifToggleUI() {
   const toggle = document.getElementById('p-notif-toggle');
   const hint = document.getElementById('p-notif-hint');
+  const testBtn = document.getElementById('p-notif-test-btn');
   if (!toggle) return;
   if (!_swSupported()) {
     toggle.classList.add('disabled');
     toggle.classList.remove('on');
     hint.textContent = 'Tu navegador no admite notificaciones push.';
+    testBtn.style.display = 'none';
     return;
   }
   toggle.classList.remove('disabled');
   if (Notification.permission === 'denied') {
     toggle.classList.remove('on');
     hint.textContent = 'Están bloqueadas en los ajustes del navegador/sistema. Actívalas ahí para poder usarlas aquí.';
+    testBtn.style.display = 'none';
     return;
   }
   const sub = await _getPushSubscription();
   toggle.classList.toggle('on', !!sub);
   hint.textContent = sub ? 'Te avisaremos si tienes gastos pendientes a punto de vencer.' : '';
+  testBtn.style.display = sub ? '' : 'none';
+}
+
+async function sendTestNotification() {
+  const btn = document.getElementById('p-notif-test-btn');
+  btn.disabled = true; btn.textContent = 'Enviando…';
+  try {
+    const res = await api('POST', '/notifications/test');
+    showToast(res?.sent ? 'Notificación enviada, debería llegarte enseguida' : 'No se pudo enviar (¿permiso revocado?)', res?.sent ? 'success' : 'error');
+  } catch (e) {
+    showToast(e.message || 'Error al enviar', 'error');
+  } finally { btn.disabled = false; btn.textContent = 'Enviar notificación de prueba'; }
 }
 
 async function toggleNotifications() {
