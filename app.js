@@ -2944,6 +2944,111 @@ function showProfileTab(which) {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   CALCULADORA DE SUELDO NETO (España, orientativa)
+   Escala estatal IRPF 2025 (se dobla como aproximación de la autonómica,
+   al no diferenciar por comunidad), reducción por rendimientos del trabajo,
+   mínimo personal y familiar, y cotización SS del trabajador 2025.
+   Fuente de las cifras: AEAT (Manual Renta 2025) y Orden PJC/178/2025 (BOE).
+════════════════════════════════════════════════════════════════ */
+const snCalc = { pagas: 12, contrato: 'indefinido' };
+
+function setSalaryCalcField(field, value, btn) {
+  snCalc[field] = value;
+  btn.parentElement.querySelectorAll('.dash-stab').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+/** Tramos de la escala general estatal 2025. Se usa doblada (aprox. autonómica
+ *  = estatal) porque no tenemos tablas autonómicas completas y verificadas. */
+const IRPF_STATE_BRACKETS_2025 = [
+  { hasta: 12450,     tipo: 0.095 },
+  { hasta: 20200,     tipo: 0.12 },
+  { hasta: 35200,     tipo: 0.15 },
+  { hasta: 60000,     tipo: 0.185 },
+  { hasta: 300000,    tipo: 0.225 },
+  { hasta: Infinity,  tipo: 0.245 },
+];
+
+function _irpfProgresivo(base) {
+  if (base <= 0) return 0;
+  let cuota = 0, desde = 0;
+  for (const { hasta, tipo } of IRPF_STATE_BRACKETS_2025) {
+    const tramo = Math.min(base, hasta) - desde;
+    if (tramo <= 0) break;
+    cuota += tramo * tipo * 2; // ×2: aproxima la escala autonómica como igual a la estatal
+    desde = hasta;
+    if (base <= hasta) break;
+  }
+  return cuota;
+}
+
+function _reduccionRendimientoTrabajo(rendimientoNeto) {
+  if (rendimientoNeto <= 14852) return 7302;
+  if (rendimientoNeto <= 17673.52) return 7302 - 1.75 * (rendimientoNeto - 14852);
+  if (rendimientoNeto < 19747.50) return Math.max(2364.34 - 1.14 * (rendimientoNeto - 17673.52), 0);
+  return 0;
+}
+
+function _minimoPersonalYFamiliar(numHijos) {
+  const porHijo = [0, 2400, 2700, 4000]; // 1º, 2º, 3º; el 4º y siguientes suman 4500 cada uno
+  let minimo = 5550;
+  for (let i = 1; i <= Math.min(numHijos, 3); i++) minimo += porHijo[i];
+  if (numHijos > 3) minimo += (numHijos - 3) * 4500;
+  return minimo;
+}
+
+function calculateNetSalary() {
+  const bruto = parseFloat(document.getElementById('sn-bruto').value);
+  const resEl = document.getElementById('sn-result');
+  if (isNaN(bruto) || bruto <= 0) {
+    resEl.innerHTML = `<p style="color:var(--danger);font-size:13px">Introduce un salario bruto anual válido.</p>`;
+    return;
+  }
+  const hijos = parseInt(document.getElementById('sn-hijos').value) || 0;
+
+  // 1) Cotización a la Seguridad Social del trabajador.
+  const ssRate = snCalc.contrato === 'temporal' ? 0.0653 : 0.0648;
+  const ssBaseMax = 4909.50 * 12; // tope máximo de cotización 2025
+  const ssBase = Math.min(bruto, ssBaseMax);
+  const ssContribucion = ssBase * ssRate;
+
+  // 2) Rendimiento neto del trabajo (bruto − SS − 2000€ de gasto deducible general).
+  const rendimientoNeto = Math.max(bruto - ssContribucion - 2000, 0);
+
+  // 3) Reducción por obtención de rendimientos del trabajo (solo si aplica).
+  const reduccion = rendimientoNeto < 19747.50 ? _reduccionRendimientoTrabajo(rendimientoNeto) : 0;
+  const baseImponible = Math.max(rendimientoNeto - reduccion, 0);
+
+  // 4) Mínimo personal y familiar: se resta aplicando la escala (no a la base
+  //    directamente), que es como Hacienda calcula realmente la cuota íntegra.
+  const minimo = _minimoPersonalYFamiliar(hijos);
+  const cuotaIntegra = Math.max(_irpfProgresivo(baseImponible) - _irpfProgresivo(minimo), 0);
+
+  // 5) Deducción Ley 5/2025 (hasta 340€ para rentas bajas, se extingue a los 18.276€).
+  let deduccion = 0;
+  if (rendimientoNeto <= 16576) deduccion = 340;
+  else if (rendimientoNeto < 18276) deduccion = Math.max(340 - 0.20 * (rendimientoNeto - 16576), 0);
+  const cuotaFinal = Math.max(cuotaIntegra - deduccion, 0);
+
+  const netoAnual = bruto - ssContribucion - cuotaFinal;
+  const netoMensual = netoAnual / snCalc.pagas;
+  const tipoEfectivo = (cuotaFinal / bruto) * 100;
+
+  resEl.innerHTML = `
+    <div class="insight-goal-card" style="margin-bottom:14px">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">NETO MENSUAL (${snCalc.pagas} pagas)</div>
+      <div style="font-size:30px;font-weight:700">${fmtEur(netoMensual)}</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">${fmtEur(netoAnual)} netos al año</div>
+    </div>
+    <div class="scard-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="scard"><div class="snum">${fmtEur(ssContribucion)}</div><div class="slbls">Seguridad Social</div></div>
+      <div class="scard"><div class="snum">${fmtEur(cuotaFinal)}</div><div class="slbls">Retención IRPF</div></div>
+    </div>
+    <p style="font-size:12px;color:var(--muted)">Tipo efectivo de IRPF: ${tipoEfectivo.toFixed(1)}% · Cotización SS: ${(ssRate*100).toFixed(2)}%</p>
+  `;
+}
+
+/* ═══════════════════════════════════════════════════════════
    PRESUPUESTOS — vista conjunta del global, por cuenta y por categoría
 ════════════════════════════════════════════════════════════════ */
 function _budgetBar(spent, budget) {

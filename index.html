@@ -13,7 +13,7 @@
   <script src="config.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=20261115y">
+  <link rel="stylesheet" href="styles.css?v=20261115z">
 </head>
 <body>
 
@@ -865,6 +865,7 @@
       <button class="ptab"    id="ptab-categorias" onclick="showProfileTab('categorias')">Categorías</button>
       <button class="ptab"    id="ptab-presupuestos" onclick="showProfileTab('presupuestos')">Presupuestos</button>
       <button class="ptab"    id="ptab-historial"  onclick="showProfileTab('historial')">Historial</button>
+      <button class="ptab"    id="ptab-sueldo"      onclick="showProfileTab('sueldo')">Sueldo neto</button>
     </div>
 
     <!-- Cuenta -->
@@ -963,6 +964,45 @@
       <div id="historial-content">
         <div class="ldg"><span class="ldg-dot"></span><span class="ldg-dot"></span><span class="ldg-dot"></span></div>
       </div>
+    </div>
+
+    <!-- Calculadora de sueldo neto (España) -->
+    <div class="ptab-content" id="pc-sueldo" style="display:none">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px">
+        Cálculo orientativo (datos 2025 de la escala estatal de IRPF y cotización a la
+        Seguridad Social). No diferencia por comunidad autónoma ni cubre casos especiales
+        (autónomos, mayores de 65, etc.) — no sustituye a tu nómina real.
+      </p>
+      <div class="fld">
+        <label>Salario bruto anual <span class="req">*</span></label>
+        <div class="amount-row"><span class="currency-prefix">€</span><input type="number" id="sn-bruto" placeholder="30000" min="0" step="100"></div>
+      </div>
+      <div class="fld">
+        <label>Pagas al año</label>
+        <div class="dash-subtabs" id="sn-pagas-toggle">
+          <button type="button" class="dash-stab on" onclick="setSalaryCalcField('pagas',12,this)">12 pagas</button>
+          <button type="button" class="dash-stab" onclick="setSalaryCalcField('pagas',14,this)">14 pagas</button>
+        </div>
+      </div>
+      <div class="fld">
+        <label>Tipo de contrato</label>
+        <div class="dash-subtabs" id="sn-contrato-toggle">
+          <button type="button" class="dash-stab on" onclick="setSalaryCalcField('contrato','indefinido',this)">Indefinido</button>
+          <button type="button" class="dash-stab" onclick="setSalaryCalcField('contrato','temporal',this)">Temporal</button>
+        </div>
+      </div>
+      <div class="fld">
+        <label>Hijos a cargo</label>
+        <select id="sn-hijos">
+          <option value="0">Ninguno</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4 o más</option>
+        </select>
+      </div>
+      <button class="btn-p" onclick="calculateNetSalary()" style="margin-bottom:16px">Calcular</button>
+      <div id="sn-result"></div>
     </div>
   </div>
 </div>
@@ -1106,6 +1146,6 @@
 
 <div id="print-area"></div>
 
-<script src="app.js?v=20261115y"></script>
+<script src="app.js?v=20261115z"></script>
 </body>
 </html>
