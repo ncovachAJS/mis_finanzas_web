@@ -628,6 +628,7 @@ async function startApp() {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   applyUserTheme();
+  registerServiceWorker();
   api('GET', '/partner').then(p => {
     if (p?.linked) { state.sharedLinked = true; state.sharedPartner = p.partner; syncPartnerNavLabel(); }
   }).catch(() => {});
@@ -2696,6 +2697,97 @@ function setTheme(value) {
   updateThemeColorMeta();
 }
 
+/* ═══════════════════════════════════════════════════════════
+   NOTIFICACIONES PUSH
+════════════════════════════════════════════════════════════════ */
+function _swSupported() {
+  return 'serviceWorker' in navigator && 'PushManager' in window;
+}
+
+function registerServiceWorker() {
+  if (!_swSupported()) return;
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+function _urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i++) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
+async function _getPushSubscription() {
+  if (!_swSupported()) return null;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    return await reg.pushManager.getSubscription();
+  } catch (e) { return null; }
+}
+
+async function updateNotifToggleUI() {
+  const toggle = document.getElementById('p-notif-toggle');
+  const hint = document.getElementById('p-notif-hint');
+  if (!toggle) return;
+  if (!_swSupported()) {
+    toggle.classList.add('disabled');
+    toggle.classList.remove('on');
+    hint.textContent = 'Tu navegador no admite notificaciones push.';
+    return;
+  }
+  toggle.classList.remove('disabled');
+  if (Notification.permission === 'denied') {
+    toggle.classList.remove('on');
+    hint.textContent = 'Están bloqueadas en los ajustes del navegador/sistema. Actívalas ahí para poder usarlas aquí.';
+    return;
+  }
+  const sub = await _getPushSubscription();
+  toggle.classList.toggle('on', !!sub);
+  hint.textContent = sub ? 'Te avisaremos si tienes gastos pendientes a punto de vencer.' : '';
+}
+
+async function toggleNotifications() {
+  const toggle = document.getElementById('p-notif-toggle');
+  const hint = document.getElementById('p-notif-hint');
+  if (!_swSupported() || toggle.classList.contains('disabled')) return;
+  const current = await _getPushSubscription();
+  if (current) {
+    try {
+      await api('DELETE', '/notifications/subscribe', { endpoint: current.endpoint });
+      await current.unsubscribe();
+    } catch (e) { /* lo intentamos de todas formas al refrescar el estado */ }
+    await updateNotifToggleUI();
+    return;
+  }
+  if (Notification.permission === 'denied') {
+    showToast('Las notificaciones están bloqueadas en el navegador', 'error');
+    return;
+  }
+  hint.textContent = 'Activando…';
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') { await updateNotifToggleUI(); return; }
+    const keyRes = await api('GET', '/notifications/vapid-public-key');
+    if (!keyRes?.publicKey) {
+      showToast('Las notificaciones no están disponibles ahora mismo', 'error');
+      await updateNotifToggleUI();
+      return;
+    }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: _urlBase64ToUint8Array(keyRes.publicKey),
+    });
+    const json = sub.toJSON();
+    await api('POST', '/notifications/subscribe', { endpoint: json.endpoint, keys: json.keys });
+    showToast('Notificaciones activadas', 'success');
+  } catch (e) {
+    showToast('No se pudieron activar las notificaciones', 'error');
+  }
+  await updateNotifToggleUI();
+}
+
 function updateThemeSelector() {
   const saved = localStorage.getItem(_themeKey());
   const active = saved || 'system';
@@ -2815,6 +2907,7 @@ function openProfileModal() {
   render2faSection();
   updateThemeSelector();
   updateAvatarUI(state.user?.avatar || null);
+  updateNotifToggleUI();
   showProfileTab('cuenta');
   openModal('profile-modal');
   loadSavingsGoals();

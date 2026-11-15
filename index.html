@@ -13,7 +13,7 @@
   <script src="config.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
-  <link rel="stylesheet" href="styles.css?v=20261115w">
+  <link rel="stylesheet" href="styles.css?v=20261115x">
 </head>
 <body>
 
@@ -876,6 +876,13 @@
         <button class="theme-opt" id="theme-opt-dark"   onclick="setTheme('dark')"   title="Oscuro">🌙 Oscuro</button>
       </div>
 
+      <div class="slbl">Notificaciones</div>
+      <div class="toggle-row" id="p-notif-toggle" onclick="toggleNotifications()">
+        <div class="sw"></div>
+        <div class="tg-lbl">Avisarme de gastos pendientes por vencer</div>
+      </div>
+      <p id="p-notif-hint" style="font-size:12px;color:var(--muted);margin:6px 0 20px"></p>
+
       <div class="slbl">Foto de perfil</div>
       <div class="avatar-upload" onclick="document.getElementById('p-avatar-input').click()">
         <img id="p-avatar-img" src="" style="display:none;width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--border)">
@@ -1098,6 +1105,6 @@
 
 <div id="print-area"></div>
 
-<script src="app.js?v=20261115w"></script>
+<script src="app.js?v=20261115x"></script>
 </body>
 </html>

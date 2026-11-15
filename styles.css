@@ -144,6 +144,7 @@ input[type=date]{color-scheme:light}
 .toggle-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);cursor:pointer;transition:border-color .15s;margin-bottom:10px}
 .toggle-row:hover{border-color:var(--primary)}
 .toggle-row.on{border-color:var(--success);background:var(--income-l)}
+.toggle-row.disabled{opacity:.5;cursor:not-allowed}
 .sw{width:36px;height:20px;border-radius:10px;background:var(--border);position:relative;flex-shrink:0;transition:background .2s}
 .sw::after{content:'';width:16px;height:16px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.18)}
 .toggle-row.on .sw{background:var(--success)}
