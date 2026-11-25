@@ -4443,7 +4443,8 @@ function renderSharedOverview() {
       <button class="btn-p" style="flex:1;margin-top:0" onclick="openSharedExpenseModal()">＋ Gasto compartido</button>
       <button class="btn-s" onclick="openSettleModal()">Liquidar deudas</button>
     </div>
-    <button class="btn-s" style="width:100%;margin-bottom:18px;justify-content:center" onclick="openGroupsManagement()">${catIconSvg('plane', 15)} Grupos (${state.sharedGroups.filter(g => g.id).length})</button>
+    <button class="btn-s" style="width:100%;margin-bottom:10px;justify-content:center" onclick="openGroupsManagement()">${catIconSvg('plane', 15)} Grupos (${state.sharedGroups.filter(g => g.id).length})</button>
+    <button class="auth-link" style="width:100%;margin-bottom:18px;padding:0" onclick="linkOldSharedExpenses()" id="link-old-shared-btn">Enlazar gastos antiguos con su Split</button>
     ${renderSharedMonthlyTotals()}
     ${itemsHtml}
   `;
@@ -4841,6 +4842,22 @@ async function deleteSettlement(id) {
 function reloadSharedCurrentView() {
   if (state.sharedView === 'feed') return openSharedGroup(state.sharedActiveGroupId);
   return loadSharedExpenses();
+}
+
+/** Intenta enlazar retroactivamente gastos ya existentes (de antes de que el
+ *  switch de Split guardara el enlace al crearlos) con el gasto compartido
+ *  correspondiente, emparejando por nombre/importe y fecha de creación
+ *  cercana. Se puede ejecutar varias veces sin problema. */
+async function linkOldSharedExpenses() {
+  const btn = document.getElementById('link-old-shared-btn');
+  btn.disabled = true; btn.textContent = 'Buscando…';
+  try {
+    const res = await api('POST', '/expenses/link-shared-retroactive');
+    showToast(res?.linked ? `${res.linked} gasto${res.linked > 1 ? 's' : ''} enlazado${res.linked > 1 ? 's' : ''} con Split` : 'No se encontró ninguno más para enlazar', res?.linked ? 'success' : '');
+    if (res?.linked) { await loadGastos(); if (activeTab === 'dashboard') loadDashboard(); }
+  } catch(e) {
+    showToast(e.message || 'Error al enlazar', 'error');
+  } finally { btn.disabled = false; btn.textContent = 'Enlazar gastos antiguos con su Split'; }
 }
 
 /* ═══════════════════════════════════════════════════════════
