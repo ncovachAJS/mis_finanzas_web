@@ -84,6 +84,7 @@ function catIconPrefix(icon) {
 const EXPENSE_TYPES = {
   FIXED:      { label:'Gasto fijo',    icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7"/><path d="M9 22V12h6v10"/><path d="M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10"/></svg>', color:'#6366F1' },
   VARIABLE:   { label:'Variable',      icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>', color:'#22C55E' },
+  LEISURE:    { label:'Ocio',          icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>', color:'#F59E0B' },
   DEBT:       { label:'Deuda',         icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>', color:'#EF4444' },
   DONATION:   { label:'Donación',      icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>', color:'#EC4899' },
   INVESTMENT: { label:'Inversión',     icon:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>', color:'#3B82F6' },
@@ -1739,7 +1740,7 @@ function renderGastos() {
   }
 
   // Group by expense type
-  const typeOrder = ['FIXED','DEBT','VARIABLE','SAVINGS','INVESTMENT','DONATION','OTHER',''];
+  const typeOrder = ['FIXED','DEBT','VARIABLE','LEISURE','SAVINGS','INVESTMENT','DONATION','OTHER',''];
   const groups = {};
   list.forEach(e => {
     const key = e.expenseType || '';
@@ -2883,7 +2884,7 @@ async function saveQuickExpense() {
       amount,
       accountId: state.quickExpenseAccountId,
       categoryId: cat.id,
-      expenseType: 'VARIABLE',
+      expenseType: 'LEISURE',
       month: state.month,
       year: state.year,
       isPaid: true,
