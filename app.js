@@ -33,6 +33,7 @@ const FICO = {
   undo:    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 7"/></svg>',
   back:    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
   refresh: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
+  split:   '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
 };
 
 /* Iconos planos para categorías: el usuario elige una de estas claves en vez de
@@ -1788,6 +1789,8 @@ function renderExpenseCard(e) {
     ? `<span class="cat-tag" style="background:${ricoColor}22;color:${ricoColor};border-color:${ricoColor}55">${catIconMarkup(e.categoryIcon, 12)}${esc(e.categoryName)}</span>` : '';
   const tp = typePill(e.expenseType);
   const ricoIcon  = catIconMarkup(e.categoryIcon, 20) || catIconSvg('other', 20);
+  const splitTag = e.sharedExpenseId
+    ? `<span class="cat-tag" title="También está en Split" style="background:var(--primary-l);color:var(--primary);border-color:var(--primary)">${FICO.split} Split</span>` : '';
 
   return `
     <div class="rcard" id="gasto-${e.id}">
@@ -1798,7 +1801,7 @@ function renderExpenseCard(e) {
           <div class="rmeta-main">
             <div class="rcat">${esc(e.accountName || state.accounts.find(a => String(a.id) === String(e.accountId))?.name || 'Sin cuenta')}${e.recurrence && e.recurrence !== 'NONE' ? ' · ' + recLabel(e.recurrence) : ''}</div>
             <div class="rtitle">${esc(e.name)}</div>
-            ${(tp || catTag || cuotaTag) ? `<div class="tag-row">${tp}${catTag}${cuotaTag}</div>` : ''}
+            ${(tp || catTag || cuotaTag || splitTag) ? `<div class="tag-row">${tp}${catTag}${cuotaTag}${splitTag}</div>` : ''}
             ${e.notes ? `<div class="rnotes">${esc(e.notes)}</div>` : ''}
           </div>
           <div class="ramount expense">${fmtEur(e.amount)}</div>
@@ -3720,18 +3723,24 @@ async function saveExpense() {
     if (state.editingExpenseId) {
       showToast(await updateRecurring('expenses', state.editingExpenseId, payload, 'e', until, 'Gasto'), 'success');
     } else {
-      const res = await api('POST', '/expenses', { ...payload, ...(until && { repeatUntilMonth: until.untilMonth, repeatUntilYear: until.untilYear }) });
-      let msg = res?.repeated ? `Gasto añadido en este mes y ${res.repeated} más` : 'Gasto añadido';
       let msgType = 'success';
+      let sharedExpenseId;
+      // Se crea primero el gasto compartido (si aplica) para poder enlazar el
+      // gasto normal con él y así distinguirlo luego en la lista de Gastos.
       if (splitOn) {
         try {
-          await api('POST', '/shared-expenses', { description: name, amount, paidByMe: true, groupId: splitGroupId });
-          msg += ' y compartido en Split';
+          const se = await api('POST', '/shared-expenses', { description: name, amount, paidByMe: true, groupId: splitGroupId });
+          sharedExpenseId = se?.id;
         } catch(se) {
-          msg += ', pero no se pudo compartir en Split (' + (se.message || 'error') + ')';
           msgType = 'error';
         }
       }
+      const res = await api('POST', '/expenses', {
+        ...payload, sharedExpenseId,
+        ...(until && { repeatUntilMonth: until.untilMonth, repeatUntilYear: until.untilYear }),
+      });
+      let msg = res?.repeated ? `Gasto añadido en este mes y ${res.repeated} más` : 'Gasto añadido';
+      if (splitOn) msg += sharedExpenseId ? ' y compartido en Split' : ', pero no se pudo compartir en Split';
       showToast(msg, msgType);
     }
     closeModal('expense-modal');
